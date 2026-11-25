@@ -1,0 +1,26 @@
+# Foundry build output and caches
+out/
+cache/
+
+# Script broadcast logs: kept for real chains (the record of every deployment transaction),
+# ignored for local anvil runs (chain id 31337) and dry runs.
+broadcast/*/31337/
+broadcast/**/dry-run/
+broadcast/**/*.recovery.lock
+# The deployment record of local anvil runs and of the script tests (deployments/<chainId>.json is committed for real
+# chains only).
+deployments/31337.json
+
+# Local environment: RPC URLs. Never commit it (see .env.example).
+.env
+
+
+# Coverage reports
+lcov.info
+/coverage/
+
+# Tooling and editors
+node_modules/
+.DS_Store
+.idea/
+.vscode/

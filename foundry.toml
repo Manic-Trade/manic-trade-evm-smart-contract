@@ -1,0 +1,159 @@
+# Foundry configuration for the Manic Flash Option contract.
+#
+# Every compiler setting is pinned on purpose: the same source must produce the same bytecode on any
+# machine, today and years from now. The reasons for each pin are in docs/adr/0004-toolchain.md.
+# Foundry itself is pinned to v1.8.7 (`foundryup --install v1.8.7`, and in CI).
+
+[profile.default]
+src = "src"
+test = "test"
+script = "script"
+out = "out"
+libs = ["lib"]
+# remappings.txt is the only source of import paths, so the compiler metadata never depends on what
+# happens to be installed on a machine.
+auto_detect_remappings = false
+
+# --- Compiler -------------------------------------------------------------------------------------
+# Exact compiler version. 0.8.38 is the newest release with no known bugs; 0.8.36 has four.
+solc_version = "0.8.38"
+auto_detect_solc = false
+# EVM target. cancun gives PUSH0, TSTORE/TLOAD (transient reentrancy guard) and MCOPY, and every target
+# chain runs ArbOS 61, which supports it. Set explicitly: solc's own default is osaka since 0.8.31.
+evm_version = "cancun"
+# The legacy pipeline with the optimizer. via-IR stays off: four of 2026's compiler bugs were via-IR only.
+optimizer = true
+optimizer_runs = 200
+via_ir = false
+
+# --- Size -----------------------------------------------------------------------------------------
+# Robinhood Chain's contract-size limit (docs/adr/0007-robinhood-code-size-limit.md): 98,304 bytes of runtime code,
+# probed live on mainnet 4663 and testnet 46630 on 2026-11-10 (98,305 is refused). Foundry uses it for
+# `forge build --sizes`, which CI runs, and for the test EVM, and derives from it the initcode limit, 196,608 bytes,
+# which is also Robinhood's. Every profile inherits it.
+code_size_limit = 98304
+
+# --- Tests ----------------------------------------------------------------------------------------
+# What tests and scripts may touch on disk: read the golden vectors, the build output and the deploy scripts' inputs,
+# and write deployment records. Nothing else.
+fs_permissions = [
+    { access = "read", path = "./test/fixtures" },
+    { access = "read", path = "./out" },
+    { access = "read", path = "./script/config" },
+    { access = "read-write", path = "./deployments" },
+]
+
+[profile.default.fuzz]
+runs = 1_000
+
+# The stateful suite, test/invariant/: two campaigns (the launch pool and a pool too small to pay its winners), each
+# of `runs` runs of `depth` calls, every invariant checked after every call (docs/ARCHITECTURE.md §12, §13). A few runs
+# locally, about 12 seconds; more in CI on every PR; 1,000 each week `dev` changed (the `deep` profile).
+[profile.default.invariant]
+runs = 32
+depth = 100
+# The invariant handlers never revert: a refusal they expect is caught and its error checked. So a revert is a call the
+# handler expected to go through that the contract refused, or a handler bug, and either fails the run (security
+# checklist TEST-1). Every profile inherits this.
+fail_on_revert = true
+
+# CI runs the same suites with more fuzz and invariant runs, and treats compiler warnings as errors.
+[profile.ci]
+deny = "warnings"
+# Warnings from the pinned libraries are not ours to fix (for example OpenZeppelin 5.6.1 names a variable `error`,
+# which solc 0.8.38 flags as a future keyword). Warnings in src/, test/ and script/ still fail the build.
+ignored_warnings_from = ["lib/"]
+
+[profile.ci.fuzz]
+runs = 10_000
+
+[profile.ci.invariant]
+runs = 128
+depth = 100
+
+# The deep run: every fuzz property 100,000 times, ten times CI's, and every invariant campaign 1,000 runs of 100 calls
+# (docs/ARCHITECTURE.md §13). The workflow .github/workflows/deep-fuzz.yml runs both each week that `dev` changed, and
+# on demand. Locally:
+#   FOUNDRY_PROFILE=deep forge test --match-path 'test/fuzz/*'
+#   FOUNDRY_PROFILE=deep forge test --match-path 'test/invariant/*'
+# Each run draws new inputs: a failure prints its counterexample and the seed to replay it (test/README.md).
+[profile.deep]
+deny = "warnings"
+ignored_warnings_from = ["lib/"]
+
+[profile.deep.fuzz]
+runs = 100_000
+
+[profile.deep.invariant]
+runs = 1_000
+depth = 100
+
+# --- Upgrade checks -------------------------------------------------------------------------------
+# What the OpenZeppelin upgrades plugin reads from a build: the AST, the build-info and every contract's storage
+# layout. test/upgrade/layout/check.py, CI's upgrade-safety job, builds with this profile and runs the plugin's
+# validator itself:
+#   python3 test/upgrade/layout/check.py --base origin/dev
+# A Foundry script that upgrades through the plugin's `Upgrades` library runs the same validator through FFI, which
+# lets Solidity run shell commands. So FFI is on in this profile only, never by default, and no test needs it.
+[profile.upgrades]
+ffi = true
+ast = true
+build_info = true
+extra_output = ["storageLayout"]
+
+# --- Networks -------------------------------------------------------------------------------------
+# RPC URLs come from the environment (see .env.example); no URL or key is committed.
+[rpc_endpoints]
+robinhood_testnet = "${ROBINHOOD_TESTNET_RPC_URL}"
+robinhood = "${ROBINHOOD_RPC_URL}"
+
+# --- Formatting (`forge fmt`) ---------------------------------------------------------------------
+# Every option is set explicitly, so a future Foundry with different defaults can't reformat the code.
+# Non-default choices: break long function headers fully, write numbers as 10_000, wrap comments, use `///`
+# for NatSpec, and sort imports within each blank-line-separated group.
+[fmt]
+line_length = 120
+tab_width = 4
+style = "space"
+bracket_spacing = false
+int_types = "long"
+multiline_func_header = "all"
+quote_style = "double"
+number_underscore = "thousands"
+hex_underscore = "remove"
+single_line_statement_blocks = "preserve"
+override_spacing = false
+wrap_comments = true
+docs_style = "line"
+contract_new_lines = false
+sort_imports = true
+namespace_import_style = "prefer_plain"
+pow_no_space = false
+prefer_compact = "all"
+single_line_imports = false
+ignore = []
+
+# --- Linting (`forge lint`, also run on every build) ----------------------------------------------
+# Four lints are excluded on purpose:
+# - block-timestamp: the contract checks price times against block.timestamp by design
+#   (docs/ARCHITECTURE.md §2).
+# - internal-function-used-once: a style hint to inline small functions. LeverageMath deliberately keeps one
+#   named function per rule of docs/MATH.md, so each rule can be read and audited on its own.
+# - reentrancy-events: it treats any function containing inline assembly as a possible external call. Every
+#   function reaches storage through `_getFlashOptionStorage()`, the ERC-7201 accessor, whose assembly only sets a
+#   storage pointer, so the lint would flag every event in the contract. Reentrancy is handled by design instead:
+#   `nonReentrant` on every state-changing function, checks-effects-interactions, and the token as the only external
+#   call (docs/ARCHITECTURE.md §15). Slither's reentrancy detectors still run (audit/static-analysis.md).
+# - require-revert-in-loop: it guards against a batch that one bad item can block. Our batches choose per check
+#   (docs/ARCHITECTURE.md §8.4, §8.5): a position that has already ended, which can race with the batch, is skipped;
+#   an id that doesn't fit the batch (never opened, another market, a tick that isn't its own) reverts with the id,
+#   so the backend drops it and resends; a refused payout never reverts (`_pay` defers it to `claimable`). The lint
+#   follows every call out of a loop, so it also flags each check of the maths library and `_pay`'s gas guards: 16
+#   sites, none a mistake. The fuzz suite proves instead that a stored open position always ends (DOS-1).
+# Tests and scripts aren't linted by forge (solhint covers them).
+[lint]
+lint_on_build = true
+severity = ["high", "medium", "low", "info"]
+exclude_lints = ["block-timestamp", "internal-function-used-once", "reentrancy-events", "require-revert-in-loop"]
+ignore = ["test/**/*.sol", "script/**/*.sol"]
+
