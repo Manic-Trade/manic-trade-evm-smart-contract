@@ -1,0 +1,11 @@
+CheckSignature_Concrete_Test
+├── when the signature recovers to the signer
+│   └── it should accept it, even if the signer has code
+└── when the signature does not recover to the signer
+    ├── when the signer has no code
+    │   └── it should revert
+    └── when the signer has code
+        ├── when its isValidSignature returns the magic value
+        │   └── it should accept it
+        └── when its isValidSignature gives any other answer
+            └── it should revert
