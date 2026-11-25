@@ -177,6 +177,76 @@ library LeverageMath {
         return toInt64(side == Side.Call ? e + capOffset : e - capOffset);
     }
 
+    /// @notice The payout multiple g at `price`, in bps of the stake, for a position at `leverage` whose line was not
+    ///         touched.
+    /// @dev `R` is the move in the user's favour relative to entry, × L × 10_000, floored: L × the move in bps. At
+    ///      1000x, +1 bp gives +1_000, so a +1 bp move pays 1.1x (11_000) and a -1 bp move 0.9x (9_000); at 100x, +1 bp
+    ///      gives +100: 1.01x. g = 10_000 + R. Any winning move, however small (`R > 0`), pays at least the floor. g
+    ///      never exceeds the cap and never goes below 0; only a move past the liquidation line could go that low, and
+    ///      such a position is liquidated instead of settled. The prices are checked before the leverage.
+    /// @param entry The entry price; must be positive (`InvalidPrice`).
+    /// @param price The price to value the position at; must be positive (`InvalidPrice`).
+    /// @param side `Call` (long) or `Put` (short).
+    /// @param leverage The leverage L: `leverageAllowed` (`InvalidLeverageParams`).
+    /// @param floorBps The least a winning position pays, in bps of its stake (e.g. 13_000 = 1.3x).
+    /// @param capBps The most it pays, in bps of its stake (e.g. 40_000 = 4x).
+    /// @return The payout multiple in bps, between 0 and `capBps`.
+    function gBps(
+        int64 entry,
+        int64 price,
+        Side side,
+        uint16 leverage,
+        uint16 floorBps,
+        uint16 capBps
+    )
+        internal
+        pure
+        returns (uint16)
+    {
+        if (entry <= 0 || price <= 0) revert IManicFlashOptionErrors.InvalidPrice();
+        if (!leverageAllowed(leverage)) revert IManicFlashOptionErrors.InvalidLeverageParams();
+        // The price move in the user's favour: positive for both sides when the position is winning.
+        int256 favourableMove = side == Side.Call ? int256(price) - entry : int256(entry) - price;
+        // Floored, so a losing move never rounds in the user's favour (-$8 on $83,884 at 1000x pays 9_046, not
+        // 9_047). The product fits easily: a move below 2^64 times L × 10_000 below 2^27.
+        int256 r = floorDiv(favourableMove * (int256(uint256(leverage)) * BPS_SIGNED), entry);
+        int256 g = BPS_SIGNED + r;
+        int256 floor = int256(uint256(floorBps));
+        int256 cap = int256(uint256(capBps));
+        if (r > 0 && g < floor) g = floor;
+        if (g > cap) g = cap;
+        if (g < 0) g = 0;
+        return toUint16(g);
+    }
+
+    /// @notice What a position pays at multiple `multipleBps`: `stake × multipleBps / 10_000`.
+    /// @param stake The position's stake, in token base units.
+    /// @param multipleBps The payout multiple, in bps (from `gBps`).
+    /// @return The payout, rounded down (pool favoured). `MathOverflow` if it doesn't fit `uint64`.
+    function payout(uint64 stake, uint16 multipleBps) internal pure returns (uint64) {
+        return toUint64((uint256(stake) * multipleBps) / BPS); // rounds down: pool favoured
+    }
+
+    /// @notice The most a position can win above its stake: `stake × (capBps − 10_000) / 10_000`. Opening a position
+    ///         adds it to the pool's open exposure, and ending it subtracts the same value.
+    /// @param stake The position's stake, in token base units.
+    /// @param capBps The position's payout cap; must be at least 10_000 (`InvalidLeverageParams`). Note the bound is
+    ///        `>=` here but `>` in `lines`: a 1x cap has a max profit of 0.
+    /// @return The max profit, rounded down. `MathOverflow` if it doesn't fit `uint64`.
+    function maxProfit(uint64 stake, uint16 capBps) internal pure returns (uint64) {
+        if (capBps < BPS) revert IManicFlashOptionErrors.InvalidLeverageParams();
+        return toUint64((uint256(stake) * (capBps - BPS)) / BPS); // rounds down: pool favoured
+    }
+
+    /// @notice Whether `price` touches the liquidation line. Equality counts.
+    /// @param price The price to check.
+    /// @param liqPrice The position's liquidation line.
+    /// @param side `Call`: touched at or below the line. `Put`: touched at or above it.
+    /// @return True if the position is liquidated at `price`.
+    function touched(int64 price, int64 liqPrice, Side side) internal pure returns (bool) {
+        return side == Side.Call ? price <= liqPrice : price >= liqPrice;
+    }
+
     /// @dev `tokens` whole tokens in base units (`tokens × 10^decimals`), reverting `MathOverflow` when `10^decimals`
     ///      or the product doesn't fit `uint64`. `10^20` already exceeds `uint64`, so larger decimals stop early,
     ///      before `10**decimals` could overflow even 256 bits.

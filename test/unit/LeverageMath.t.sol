@@ -157,3 +157,146 @@ contract Lines_LeverageMath_Unit_Test is LeverageMath_Unit_Shared_Test {
         math.lines(0, Side.Call, V.L1000, 0, 10_000);
     }
 }
+
+/// @notice `gBps` and `payout` together: what a position pays at expiry.
+contract GBps_LeverageMath_Unit_Test is LeverageMath_Unit_Shared_Test {
+    /// @dev +$8 at expiry: R = floor(8e8 × 1e7 / P0) = 953, so g = 10,953 (1.0953x), below each floor here. A win pays
+    ///      at least the floor: $11 / $14 / $15 on $10 at 1.1x / 1.4x / 1.5x.
+    function test_ASmallWinPaysTheFloor() public view {
+        uint16[3] memory floors = [uint16(11_000), 14_000, 15_000];
+        uint64[3] memory wants = [uint64(11_000_000), 14_000_000, 15_000_000];
+        for (uint256 i; i < floors.length; ++i) {
+            uint16 g = math.gBps(V.P0, V.priceAt(8), Side.Call, V.L1000, floors[i], V.CAP_4X);
+            assertEq(math.payout(V.STAKE, g), wants[i]);
+        }
+    }
+
+    /// @dev $10 at a 1.3x floor: +$84 is R = 10,013, so g = 2.0013x and $20.013; +$252 is R = 30,041, capped at 4x
+    ///      ($40); -$8 is R = -954, so g = 0.9046x and $9.046; flat pays the stake back.
+    function test_PayoutsAcrossThePriceRange() public view {
+        assertEq(_payAt13(V.priceAt(84)), 20_013_000, "+$84 pays $20.013");
+        assertEq(_payAt13(V.priceAt(252)), 40_000_000, ">= +$252 pays the $40 cap");
+        assertEq(_payAt13(V.priceAt(-8)), 9_046_000, "-$8 pays $9.046");
+        assertEq(_payAt13(V.P0), V.STAKE, "flat pays the stake back");
+    }
+
+    /// @dev Why `floorDiv` matters: -$8 on $83,884 is a move of -953.69 in R_e7 units. Floored it is -954, so the
+    ///      multiple is 9_046 and the payout $9.046. Rounding toward zero would give 9_047 and pay $0.001 more.
+    function test_ALosingMoveRoundsDownNotTowardZero() public view {
+        assertEq(math.gBps(V.P0, V.priceAt(-8), Side.Call, V.L1000, 13_000, V.CAP_4X), 9046);
+    }
+
+    /// @dev For a short, -$8 is R = +953, a win below the 1.4x floor, so it pays the floor; +$8 is R = -954, 0.9046x.
+    function test_AShortWinsWhenThePriceFalls() public view {
+        assertEq(math.gBps(V.P0, V.priceAt(-8), Side.Put, V.L1000, 14_000, V.CAP_4X), 14_000);
+        assertEq(math.gBps(V.P0, V.priceAt(8), Side.Put, V.L1000, 14_000, V.CAP_4X), 9046);
+    }
+
+    /// @dev Over a grid of caps (1.5x, 2.5x, 4x), floors (1.1x, 1.5x) and moves (-$1,000 to +$100,000), g never passes
+    ///      the cap, and the payout never passes the stake plus the max profit.
+    function test_ThePayoutIsCappedAndNeverAboveStakePlusMaxProfit() public view {
+        uint16[3] memory caps = [uint16(15_000), 25_000, V.CAP_4X];
+        uint16[2] memory floors = [uint16(11_000), 15_000];
+        int64[9] memory moves = [int64(-1000), -10, -1, 0, 1, 10, 100, 1000, 100_000];
+        for (uint256 c; c < caps.length; ++c) {
+            for (uint256 f; f < floors.length; ++f) {
+                if (floors[f] > caps[c]) continue;
+                for (uint256 m; m < moves.length; ++m) {
+                    uint16 g = math.gBps(V.P0, V.priceAt(moves[m]), Side.Call, V.L1000, floors[f], caps[c]);
+                    assertLe(g, caps[c], "never above the cap");
+                    uint64 paid = math.payout(V.STAKE, g);
+                    assertLe(paid, V.STAKE + math.maxProfit(V.STAKE, caps[c]), "never above stake + max profit");
+                }
+            }
+        }
+    }
+
+    /// @dev A price far past the line clamps at 0: half the entry is R = -5,000,000 for a long.
+    function test_APriceFarPastTheLineClampsToZero() public view {
+        assertEq(math.gBps(V.P0, V.P0 / 2, Side.Call, V.L1000, 11_000, V.CAP_4X), 0);
+    }
+
+    /// @dev 256-bit maths can't overflow on any int64 price.
+    function test_HugePricesDoNotOverflow() public view {
+        int64 big = type(int64).max / 2;
+        assertEq(math.gBps(big, big / 3, Side.Put, V.L1000, 15_000, V.CAP_4X), V.CAP_4X, "a huge win is capped");
+    }
+
+    /// @dev Both prices must be positive.
+    function test_RevertWhen_TheEntryPriceIsZero() public {
+        vm.expectRevert(IManicFlashOptionErrors.InvalidPrice.selector);
+        math.gBps(0, V.P0, Side.Call, V.L1000, 11_000, V.CAP_4X);
+    }
+
+    function test_RevertWhen_ThePriceIsNegative() public {
+        vm.expectRevert(IManicFlashOptionErrors.InvalidPrice.selector);
+        math.gBps(V.P0, -1, Side.Put, V.L1000, 11_000, V.CAP_4X);
+    }
+
+    function _payAt13(int64 price) internal view returns (uint64) {
+        return math.payout(V.STAKE, math.gBps(V.P0, price, Side.Call, V.L1000, 13_000, V.CAP_4X));
+    }
+}
+
+/// @notice `payout` on its own: rounding and overflow.
+contract Payout_LeverageMath_Unit_Test is LeverageMath_Unit_Shared_Test {
+    function test_OneXPaysTheStakeBack() public view {
+        assertEq(math.payout(V.STAKE, 10_000), V.STAKE);
+    }
+
+    function test_RoundsDownInThePoolsFavour() public view {
+        assertEq(math.payout(1, 9999), 0, "0.9999 base units rounds down to 0");
+        assertEq(math.payout(3, 13_333), 3, "3.9999 rounds down to 3");
+    }
+
+    /// @dev The largest stake whose 4x payout still fits a `uint64`.
+    function test_TheLargestFourXPayoutThatFits() public view {
+        uint64 stake = type(uint64).max / 4;
+        assertEq(math.payout(stake, V.CAP_4X), stake * 4);
+    }
+
+    /// @dev A 4x payout on the largest stake doesn't fit a `uint64`: an error, never a wrap.
+    function test_RevertWhen_ThePayoutDoesNotFitUint64() public {
+        vm.expectRevert(IManicFlashOptionErrors.MathOverflow.selector);
+        math.payout(type(uint64).max, V.CAP_4X);
+    }
+}
+
+/// @notice `maxProfit`: the exposure a position adds to the pool.
+contract MaxProfit_LeverageMath_Unit_Test is LeverageMath_Unit_Shared_Test {
+    /// @dev The max profit is the stake × (cap − 1x): $30 on $10 at 4x, $5 at 1.5x, and 0 at 1x.
+    function test_FollowsTheCap() public view {
+        assertEq(math.maxProfit(V.STAKE, V.CAP_4X), V.usdc(30), "4x: up to $30 profit on $10");
+        assertEq(math.maxProfit(V.STAKE, 15_000), V.usdc(5));
+        assertEq(math.maxProfit(V.STAKE, 10_000), 0, "a 1x cap is allowed here and has no profit");
+    }
+
+    function test_RevertWhen_TheCapIsBelowOneX() public {
+        vm.expectRevert(IManicFlashOptionErrors.InvalidLeverageParams.selector);
+        math.maxProfit(V.STAKE, 9999);
+    }
+
+    function test_RevertWhen_TheMaxProfitDoesNotFitUint64() public {
+        vm.expectRevert(IManicFlashOptionErrors.MathOverflow.selector);
+        math.maxProfit(type(uint64).max, V.CAP_4X);
+    }
+}
+
+/// @notice `touched`: equality counts on both sides.
+contract Touched_LeverageMath_Unit_Test is LeverageMath_Unit_Shared_Test {
+    /// @dev A price exactly on the line touches it; one price unit on the safe side doesn't.
+    function test_EqualityCountsAndOneUnitAwayDoesNot() public view {
+        (int64 shortLiq,) = math.lines(V.P0, Side.Put, V.L1000, V.THETA_1M, V.CAP_4X);
+        assertTrue(math.touched(shortLiq, shortLiq, Side.Put), "a short is touched at its line");
+        assertFalse(math.touched(shortLiq - 1, shortLiq, Side.Put), "one unit below a short's line is safe");
+
+        (int64 longLiq,) = math.lines(V.P0, Side.Call, V.L1000, V.THETA_1M, V.CAP_4X);
+        assertTrue(math.touched(longLiq, longLiq, Side.Call), "a long is touched at its line");
+        assertFalse(math.touched(longLiq + 1, longLiq, Side.Call), "one unit above a long's line is safe");
+    }
+
+    function test_BeyondTheLineIsTouched() public view {
+        assertTrue(math.touched(V.P0 / 2, V.P0, Side.Call));
+        assertTrue(math.touched(V.P0 * 2, V.P0, Side.Put));
+    }
+}
