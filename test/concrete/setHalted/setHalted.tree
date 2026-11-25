@@ -1,0 +1,13 @@
+SetHalted_Concrete_Test
+├── when halting
+│   ├── when the caller is neither the guardian nor the operator
+│   │   └── it should revert
+│   └── when the caller is the guardian or the operator
+│       ├── it should halt the contract, even one already halted
+│       └── it should emit {HaltChanged}
+└── when resuming
+    ├── when the caller is not the operator
+    │   └── it should revert
+    └── when the caller is the operator
+        ├── it should resume the contract
+        └── it should emit {HaltChanged}

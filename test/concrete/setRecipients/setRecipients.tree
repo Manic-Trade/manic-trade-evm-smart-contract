@@ -1,0 +1,9 @@
+SetRecipients_Concrete_Test
+├── when the caller is not the admin
+│   └── it should revert
+└── when the caller is the admin
+    ├── when either recipient is the zero address
+    │   └── it should revert
+    └── when both recipients are set
+        ├── it should store both
+        └── it should emit {RecipientsUpdated}

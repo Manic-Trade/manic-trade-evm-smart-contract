@@ -1,0 +1,25 @@
+CreateMarket_Concrete_Test
+├── when the caller is not the admin
+│   └── it should revert
+└── when the caller is the admin
+    ├── when the market id is zero
+    │   └── it should revert
+    └── when the market id is not zero
+        ├── given the market already exists
+        │   └── it should revert
+        └── given the market does not exist yet
+            ├── when the price exponent is outside minus 18 to 0
+            │   └── it should revert
+            └── when the price exponent is minus 18 to 0
+                ├── when the settings switch the market on
+                │   └── it should revert
+                └── when the settings leave the market off
+                    ├── when the settings are invalid
+                    │   └── it should revert
+                    └── when the settings are valid
+                        ├── given 65535 markets already exist
+                        │   └── it should revert
+                        └── given fewer than 65535 markets exist
+                            ├── it should store the market, switched off and unpaused
+                            ├── it should give it the next index
+                            └── it should emit {MarketCreated}, then {ConfigUpdated}

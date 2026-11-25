@@ -1,0 +1,19 @@
+SetPaused_Concrete_Test
+├── when pausing
+│   ├── when the caller is neither the guardian nor the operator
+│   │   └── it should revert
+│   └── when the caller is the guardian or the operator
+│       ├── given the market to pause does not exist
+│       │   └── it should revert
+│       └── given the market to pause exists
+│           ├── it should pause the market, even one already paused
+│           └── it should emit {PauseChanged}
+└── when unpausing
+    ├── when the caller is not the operator
+    │   └── it should revert
+    └── when the caller is the operator
+        ├── given the market to unpause does not exist
+        │   └── it should revert
+        └── given the market to unpause exists
+            ├── it should unpause the market
+            └── it should emit {PauseChanged}
