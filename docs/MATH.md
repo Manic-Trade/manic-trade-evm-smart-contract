@@ -12,6 +12,10 @@ money moves when the bet ends, and the rules that refuse a bet, a sale or a with
 Where this document and the code differ, the code is right. Each worked example (§12) names the unit test file that
 checks its values.
 
+A second implementation of this document, in Python, is in [`model/`](../model/README.md). It recomputes every worked
+example (`python3 model/flash_option_math.py`), and `test/model/ModelVectors.t.sol` holds the contract to it on 20,661
+inputs: the edges of every rule, and seeded random inputs over each function's whole domain.
+
 ## 1. Units and notation
 
 | Quantity | Type | Unit | Example |

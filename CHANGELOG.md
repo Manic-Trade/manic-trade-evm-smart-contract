@@ -67,6 +67,8 @@ repository yet.
     small pool whose winners are owed);
   - the access-control matrix, each key's blast radius, and the fake-price loop the breaker stops;
   - scenarios with exact numbers, to the base unit;
+  - the maths against a second implementation in Python (`model/`): 20,661 vectors of 24 functions
+    (`test/fixtures/model/`), replayed by `test/model/ModelVectors.t.sol`;
   - EIP-712 signing vectors for the backend's signer (`test/fixtures/eip712_vectors.json`);
   - fork tests against the real USDG on Robinhood Chain mainnet, run weekly;
   - an upgrade over real state, and OpenZeppelin's layout check against 15 variant patches;
@@ -75,9 +77,10 @@ repository yet.
 - **Scripts:** `DeployMockUsdg`, `Deploy`, `Configure`, `Upgrade` and `Smoke`, each checking its result on chain;
   `smoke.py`, every way a bet ends on a live chain; `bytecode.py`, which checks the deployed code is the build. Inputs
   in `script/config/`, outputs in `deployments/<chainId>.json`.
-- **CI:** formatting, the build and its size check, the tests, the committed ABI and ABI reference, the layout check,
-  Slither, coverage (every line, function and reachable branch of `src/`), solhint and bulloak, a gas check (no call
-  more than 5% dearer than on the base branch), and weekly deep fuzz, invariant and fork runs.
+- **CI:** formatting, the build and its size check, the tests, the committed ABI and ABI reference, the model's
+  vectors, the layout check, Slither, coverage (every line, function and reachable branch of `src/`), solhint and
+  bulloak, a gas check (no call more than 5% dearer than on the base branch), and weekly deep fuzz, invariant and fork
+  runs.
 - **Documentation:** the README, the architecture, the maths, the integration guide, the ABI reference, gas costs,
   the storage layout, the security checklist, the conventions, nine decision records, the runbooks (deploy, upgrade,
   relayer keys), the static-analysis report and the security policy.

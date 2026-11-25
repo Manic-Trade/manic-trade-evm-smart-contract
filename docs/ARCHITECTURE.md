@@ -127,6 +127,7 @@ src/
 ├── libraries/                   LeverageMath (§10), ConfigLib (§8.1), OrderLib (§7), BreakerLib (§8.11)
 └── types/                       StorageTypes (append-only), OrderTypes (= EIP-712 field order), ParamTypes, MathTypes
 test/         Base.t.sol, SettlementBase.t.sol, utils/, mocks/, harnesses/ and the suites of §13
+model/        MATH.md again, in Python, and the generator of the vectors test/model/ checks (§13)
 script/       DeployMockUsdg, Deploy, Configure, Upgrade, Smoke; config/chains.toml, config/MarketSettings.sol
 deployments/  <chainId>.json and <chainId>/build-info-v<version>/, written when a deployment happens
 abi/          IManicFlashOption.json, kept current by CI;  snapshots/: the gas benchmarks;  audit/: scope and triage
@@ -983,6 +984,7 @@ fuzz and invariant runs. `test/README.md` describes each folder.
 | Suite | What | When |
 |---|---|---|
 | Unit | `test/unit/`: the libraries without a proxy (`LeverageMath` with MATH.md's worked examples), the storage layout (§5 rule 9), the ABI, the mock token | Every PR and push |
+| Model vectors | `test/model/ModelVectors.t.sol`: 20,661 vectors of 24 functions of `LeverageMath` and `ConfigLib` (`test/fixtures/model/`), made by `model/flash_option_math.py`, a second implementation of MATH.md in Python: every output exact, and every refused input the model's error, with its arguments | Every PR and push; CI also checks the vectors are what the model gives now (`model/generate_vectors.py --check`) |
 | Concrete (behaviour) | `test/concrete/<fn>/`: each external function from a `.tree` of every branch in check order: the happy path, **every error in that order**, every role gate and event field; plus `views/`, `reentrancy/`, `brakes/`, `breaker/`, `counters/`, `pay/`, `checkSignature/`, `leverages/`. Endings run through the checkers of `test/SettlementBase.t.sol`, whose own model (`test/utils/Calculations.sol`, never calling `src/`) is compared with every log, pool field, slot and balance | Every PR and push; `bulloak check` keeps trees and tests in step |
 | Fuzz | `test/fuzz/`, 65 properties: the maths (`floorDiv` against a reference, `g` monotonic, `payout ≤ stake × cap`, conserving splits), every way a signature can be wrong (signer, domain, chain, replay, expiry, `notBefore`, malleable `s`, bad `v` or length, ERC-1271 and EIP-7702 signers), the order rules at their edges, rounding at tiny stakes; contract-level properties at any leverage (a changed leverage, an overpriced sale and a mixed batch are refused) | 1,000 runs locally, 10,000 in CI, 100,000 in the deep run (`deep-fuzz.yml`: weekly if `dev` changed, and on demand) |
 | Invariant (stateful) | `test/invariant/`: §12's 14 invariants after every call, two campaigns, a wind-down after each run | Depth 100: 32 runs locally, 128 in CI, 1,000 in the deep run |
