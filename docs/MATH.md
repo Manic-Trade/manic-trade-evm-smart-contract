@@ -14,7 +14,8 @@ checks its values.
 
 A second implementation of this document, in Python, is in [`model/`](../model/README.md). It recomputes every worked
 example (`python3 model/flash_option_math.py`), and `test/model/ModelVectors.t.sol` holds the contract to it on 20,661
-inputs: the edges of every rule, and seeded random inputs over each function's whole domain.
+inputs: the edges of every rule, and seeded random inputs over each function's whole domain. `model/scenarios.py`
+derives every number of the scenario tests from it, step by step.
 
 ## 1. Units and notation
 

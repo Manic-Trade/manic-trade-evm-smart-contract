@@ -203,6 +203,9 @@ warning as an error.
 - The maths has a second implementation, `model/flash_option_math.py`. A change to the maths changes docs/MATH.md and
   the model first, then regenerates the vectors (`python3 model/generate_vectors.py`), and `test/model/` must pass
   with them. A vector that changes is a rule that changed, so its diff is reviewed with the code.
+- A scenario test (`test/scenarios/`) comes with its derivation in `model/scenarios.py`: a function of the same name,
+  in the class of its test contract, that works out every number the test asserts from the model and lists the test's
+  other literals as inputs. `python3 model/scenarios.py --check` fails on a test without one.
 - Gas: `vm.snapshotGasLastFrame("<name>")` in `test/gas/`; every change to `snapshots/` is explained in the PR.
 - Fork tests (`test/fork/`, on `Fork_Base_Test`) fork Robinhood Chain mainnet through `ROBINHOOD_RPC_URL`, and skip
   themselves without it, so `forge test` never needs the network. The public RPC keeps only minutes of state, so they

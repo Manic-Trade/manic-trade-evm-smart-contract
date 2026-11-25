@@ -83,7 +83,7 @@ behind the main choices are in [`docs/adr/`](docs/adr/README.md) (architecture d
 | `fuzz/` | Properties over random inputs: the maths, signatures, the order rules, rounding, and each function at any leverage |
 | `invariant/` | Random sequences of actions on BTC at 1000x, 500x and 100x on one pool, with every invariant checked after every call |
 | `access/` | Who may call what; what each key can do alone if it leaks; the fake-price loop the breaker stops |
-| `scenarios/` | Whole flows with exact numbers, to the base unit: liquidations, settlements, sales, the IOU queue, and trading at three leverages on one pool |
+| `scenarios/` | Whole flows with exact numbers, to the base unit: liquidations, settlements, sales, the IOU queue, and trading at three leverages on one pool. Each number is derived again by the model (`model/scenarios.py`) |
 | `signing/` | The EIP-712 vectors the backend's signer must reproduce |
 | `gas/` | The gas benchmarks behind [`docs/gas.md`](docs/gas.md) |
 | `fork/` | The contract and the mock token against the real USDG, on a fork of Robinhood Chain mainnet |
@@ -150,6 +150,7 @@ The fork tests need an RPC URL (`cp .env.example .env`, then fill it in), and sk
 | Upgrade-safety check: the layout against `dev`, and the 15 variants (needs Node.js 22; CI runs it on every change) | `python3 test/upgrade/layout/check.py --base origin/dev` |
 | The maths model: recompute MATH.md's worked examples | `python3 model/flash_option_math.py` |
 | Check the model's vectors are current (CI runs it on every change) / regenerate them | `python3 model/generate_vectors.py --check` / `python3 model/generate_vectors.py` |
+| Check the scenario tests' numbers against the model (CI runs it on every change) / print the derivations | `python3 model/scenarios.py --check` / `python3 model/scenarios.py [NAME]` |
 | Format / check formatting | `forge fmt` / `forge fmt --check` |
 | Coverage | `forge coverage` |
 | Gas snapshot | `forge snapshot` |
