@@ -1,0 +1,118 @@
+{
+  "about": "EIP-712 vectors for OpenOrder and SellOrder (docs/ARCHITECTURE.md §7). The backend's custody signer must reproduce every hash and signature here before integration. Integers in orders are plain JSON numbers.",
+  "generator": "test/fixtures/eip712_vectors.py, with Foundry 1.8.7's cast (alloy's EIP-712)",
+  "signer": {
+    "key": "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80",
+    "address": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+    "note": "Anvil's well-known test key 0: public, tests only"
+  },
+  "domain": {
+    "name": "Manic Flash Option",
+    "version": "1",
+    "chainId": 46630,
+    "verifyingContract": "0x7357000000000000000000000000000000007357"
+  },
+  "domainType": "EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)",
+  "domainTypeHash": "0x8b73c3c69bb8fe3d512ecc4cf759cc79239f7b179b0ffacaa9a75d522b39400f",
+  "domainSeparator": "0xcd95085ec40cb8b463be93fa21f2dc3ae3cab6b7639779a96265902074e6f3e9",
+  "openOrderType": "OpenOrder(bytes32 positionId,address user,bytes32 marketId,uint16 leverage,uint8 side,uint64 stake,uint16 durationSecs,uint48 notBefore,uint48 deadline)",
+  "openOrderTypeHash": "0xfdf5c145d2145b57fd84fa99ed38082c86b234326f84c1896eb2894e43e0b85b",
+  "sellOrderType": "SellOrder(bytes32 positionId,uint64 minAmount,uint48 notBefore,uint48 deadline)",
+  "sellOrderTypeHash": "0x927542b7482a808b01930cc9195eb224106f6615ad2d9ae39be4b84a9229f83b",
+  "openOrders": [
+    {
+      "name": "a $25 BTC call for 60 seconds at 1000x",
+      "order": {
+        "positionId": "0x918278b8b698db354c2766b8caa3380e28373a89bac18f316083a713032a5880",
+        "user": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+        "marketId": "0xe62df6c8b4a85fe1a67db44dc12de5db330f7ac66b72dc658afedf0f4a415b43",
+        "leverage": 1000,
+        "side": 0,
+        "stake": 25000000,
+        "durationSecs": 60,
+        "notBefore": 1794000000,
+        "deadline": 1794000030
+      },
+      "structHash": "0xd9848547c0202c46bd95aeece05b80f09ab469accad9003a175072fa854c8aea",
+      "digest": "0xa265086104894b234fb564c06533af6b4e2d4bc4f654953efbf426f2e91bcc8f",
+      "signature": "0xc3840b3b40e84561bd53b9030d2a06e602ead6bc2f985ed73ab9cf09087273431aad19560b662a2e6799184204632f7828d17858a8daafcfdb830631df93f59f1c"
+    },
+    {
+      "name": "a $50 ETH put for 300 seconds at 500x",
+      "order": {
+        "positionId": "0xc0ef8fbb3e8e496a9f8d8b5f98fd8704e250079df1183e592266a264ffd20176",
+        "user": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+        "marketId": "0xff61491a931112ddf1bd8147cd1b641375f79f5825126d665480874634fd0ace",
+        "leverage": 500,
+        "side": 1,
+        "stake": 50000000,
+        "durationSecs": 300,
+        "notBefore": 1794000123,
+        "deadline": 1794000153
+      },
+      "structHash": "0xcc7b2528fbb76d1e0ebd8f74d898ef6e1c6358dc5a47d01750648e2f4c12ccff",
+      "digest": "0xbc1560b3f54e0b3c6e1935cbe6246abfd2baab4c4bcc6d8e7f8fc96a9edb803d",
+      "signature": "0xa5c13912a18998e0445073493ddbfde0628eccefa612e22b1bf978c1eab617d9245098d5fcb2fa8a253e10ced7861c3f444ce0761e42ef0bdf342f6df066c9b21c"
+    },
+    {
+      "name": "a $10 BTC put for 120 seconds at 100x",
+      "order": {
+        "positionId": "0x234052a0079c39105d5efff22592c9a4430b4ec656b7e47550fd0629c8379d50",
+        "user": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+        "marketId": "0xe62df6c8b4a85fe1a67db44dc12de5db330f7ac66b72dc658afedf0f4a415b43",
+        "leverage": 100,
+        "side": 1,
+        "stake": 10000000,
+        "durationSecs": 120,
+        "notBefore": 1794000200,
+        "deadline": 1794000230
+      },
+      "structHash": "0x5916e79fbaa30ee2e31c3140ab4cc83d4022280126c7fe8befe83e2ce19ebca0",
+      "digest": "0xe14d9bf58528f6e47730aae8e3b43cf38a5673cb7da8fa6784b62d204e048c9c",
+      "signature": "0x4e10e5f0e99a87a44525dbec49221e2734f904f77740b0a720d947dfa186daa34793badd8842d36c5131d61132263af53f3f8f0c8c7978479725945a3d9a35d01c"
+    },
+    {
+      "name": "every field at its widest",
+      "order": {
+        "positionId": "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+        "user": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+        "marketId": "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+        "leverage": 65535,
+        "side": 1,
+        "stake": 18446744073709551615,
+        "durationSecs": 65535,
+        "notBefore": 281474976710655,
+        "deadline": 281474976710655
+      },
+      "structHash": "0x80fd4cf0feb0b493fa33b1f7fabd4d1072a63e676dd1e1e4f6dbec7b0ed1955a",
+      "digest": "0xc4b4b6cccbd04c4264edc3b27676fe69be6237cfb7c10a06d59f3f667d3659ef",
+      "signature": "0xc0835239114b30302b6bb29abc9de0c36c7c5a1f9efaea6f6686446b2dc137b620315d57915153ea6ce13f7c75cb749bb23344eb45cc7447be2377d4b0b5f8bd1b"
+    }
+  ],
+  "sellOrders": [
+    {
+      "name": "sell the $25 BTC call for at least $12",
+      "order": {
+        "positionId": "0x918278b8b698db354c2766b8caa3380e28373a89bac18f316083a713032a5880",
+        "minAmount": 12000000,
+        "notBefore": 1794000045,
+        "deadline": 1794000075
+      },
+      "structHash": "0xe692c092c2fac8e678b3b5d6bbbd6974953b445c46b2dbf58c9555c3a7b855fb",
+      "digest": "0x2bad1812058347bbdfa77283fc9f05c8dec2f01bba37d850f60f12ba59fca837",
+      "signature": "0x3fae383b9254a623f77275f9d180586e9aaa2f4c620052798258d8531e70473616b4de6a69defc1675a8a5ff96154d1cc16239dbc711a346674069ad9f02852c1b"
+    },
+    {
+      "name": "every field at its widest",
+      "order": {
+        "positionId": "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+        "minAmount": 18446744073709551615,
+        "notBefore": 281474976710655,
+        "deadline": 281474976710655
+      },
+      "structHash": "0x26d14029e668e7f86cf6230f381b426212249b7a6e7684803cd89dca98329754",
+      "digest": "0x89797c1b5003f9d969c0ee565ae75976777f1571e64c61606b9a09d6e507ee98",
+      "signature": "0x6380862570aa84d03f479119ce40dbe8301aea3a52e3705336c81a28c827507d373fceb731422a94549e1771382c8a023493dea473a17b7316a6f9e3393187701c"
+    }
+  ]
+}
