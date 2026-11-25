@@ -1,0 +1,76 @@
+Sell_Concrete_Test
+├── when the caller is not an opener
+│   └── it should revert
+└── when the caller is an opener
+    ├── given the contract is halted
+    │   └── it should revert
+    └── given the contract is not halted
+        ├── when the order has expired
+        │   └── it should revert
+        └── when the order has not expired
+            ├── when the position does not exist
+            │   └── it should revert
+            └── when the position exists
+                ├── given its market is disabled
+                │   └── it should revert
+                └── given its market is enabled
+                    ├── given its market is paused
+                    │   └── it should revert
+                    └── given its market is not paused
+                        ├── given the breaker has tripped
+                        │   └── it should revert
+                        └── given the breaker has not tripped
+                            ├── given the position is not open
+                            │   └── it should revert
+                            └── given the position is open
+                                ├── when the signature is not the position's user's
+                                │   └── it should revert
+                                └── when the signature is the position's user's
+                                    ├── when the tick is outside the sell window
+                                    │   └── it should revert
+                                    └── when the tick is inside the sell window
+                                        ├── when the sale lands at or after the end of the bet
+                                        │   └── it should revert
+                                        └── when the sale lands before the end of the bet
+                                            ├── when the tick is too old or from the future
+                                            │   └── it should revert
+                                            └── when the tick is fresh
+                                                ├── when the tick is before the order
+                                                │   └── it should revert
+                                                └── when the tick is at or after the order
+                                                    ├── when the price is not positive
+                                                    │   └── it should revert
+                                                    └── when the price is positive
+                                                        ├── when the price touches the line
+                                                        │   └── it should revert
+                                                        └── when the price does not touch the line
+                                                            ├── when the valuation is above the current payout
+                                                            │   └── it should revert
+                                                            └── when the valuation is at most the current payout
+                                                                ├── when the sale amount exceeds the valuation
+                                                                │   └── it should revert
+                                                                └── when the sale amount is at most the valuation
+                                                                    ├── when the sell fee is above its cap
+                                                                    │   └── it should revert
+                                                                    └── when the sell fee is at most its cap
+                                                                        ├── when the sale amount is below the minimum
+                                                                        │   └── it should revert
+                                                                        └── when the sale amount is at least the minimum
+                                                                            ├── given anyone is owed
+                                                                            │   └── it should revert
+                                                                            └── given nobody is owed
+                                                                                ├── when the pool cannot pay the valuation
+                                                                                │   └── it should revert
+                                                                                └── when the pool can pay the valuation
+                                                                                    ├── when the payout has too little gas
+                                                                                    │   └── it should revert
+                                                                                    └── when the payout has the gas it needs
+                                                                                        ├── given the token refuses the payout
+                                                                                        │   ├── it should keep it for the user to claim
+                                                                                        │   └── it should still close the position
+                                                                                        └── given the token pays
+                                                                                            ├── it should close the position
+                                                                                            ├── it should move the sale through the books
+                                                                                            ├── it should accrue the fees
+                                                                                            ├── it should emit {PositionSold}
+                                                                                            └── it should pay the user the sale amount, less the winner fee
