@@ -1,0 +1,9 @@
+SetPoolFloor_Concrete_Test
+├── when the caller is not the admin
+│   └── it should revert
+└── when the caller is the admin
+    ├── when the floor is below 500 whole tokens
+    │   └── it should revert
+    └── when the floor is at least 500 whole tokens
+        ├── it should store the floor
+        └── it should emit {PoolFloorUpdated}

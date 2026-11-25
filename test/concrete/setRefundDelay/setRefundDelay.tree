@@ -1,0 +1,10 @@
+SetRefundDelay_Concrete_Test
+├── when the caller is not the admin
+│   └── it should revert
+└── when the caller is the admin
+    ├── when the delay is 1 to 3599 seconds
+    │   └── it should revert
+    └── when the delay is 0 or at least 1 hour
+        ├── it should store the delay
+        ├── it should emit {RefundDelayUpdated}
+        └── it should apply to positions already open

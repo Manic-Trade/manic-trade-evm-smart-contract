@@ -1,0 +1,12 @@
+RevokeRelayer_Concrete_Test
+├── when the caller is not the guardian
+│   └── it should revert
+└── when the caller is the guardian
+    ├── when the role is not a relayer role
+    │   └── it should revert
+    └── when the role is a relayer role
+        ├── given the account holds the role
+        │   ├── it should revoke it at once
+        │   └── it should emit {RoleRevoked}
+        └── given the account does not hold the role
+            └── it should do nothing
