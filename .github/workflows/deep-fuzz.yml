@@ -1,0 +1,90 @@
+# The deep run (docs/ARCHITECTURE.md §13), in two jobs side by side: every fuzz property 100,000 times, ten times the
+# runs of CI on a pull request, and every invariant campaign 1,000 runs of 100 calls. It runs once a week if something
+# was merged into `dev` that week, and on demand from the Actions tab ("Run workflow"). A week with no new commit on
+# `dev` is skipped, so it costs nothing.
+# Each run draws new inputs. A failure prints its counterexample and seed; replay it locally (test/README.md).
+name: Deep fuzz
+
+on:
+  schedule:
+    # Sundays at 20:00 UTC. A scheduled run uses the default branch, `dev`.
+    - cron: "0 20 * * 0"
+  workflow_dispatch:
+
+concurrency:
+  group: deep-fuzz
+  cancel-in-progress: false
+
+env:
+  FOUNDRY_VERSION: v1.8.7
+
+jobs:
+  changed:
+    name: Did dev change in the last week?
+    runs-on: ubuntu-latest
+    outputs:
+      run: ${{ steps.decide.outputs.run }}
+    steps:
+      - name: Check out dev's latest commit
+        uses: actions/checkout@v4
+
+      # A manual run always goes ahead; a scheduled one only if dev's latest commit is less than a week old.
+      - name: Decide
+        id: decide
+        run: |
+          if [ "${GITHUB_EVENT_NAME}" = "workflow_dispatch" ] || [ -n "$(git log -1 --since='7 days ago' --format=%H)" ]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+            echo "No new commit on dev in the last week: the deep run is skipped." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+  fuzz:
+    name: Every fuzz property, 100,000 times
+    needs: changed
+    if: needs.changed.outputs.run == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      FOUNDRY_PROFILE: deep
+    steps:
+      - name: Check out the code and the pinned library submodules
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Install Foundry ${{ env.FOUNDRY_VERSION }}
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: ${{ env.FOUNDRY_VERSION }}
+
+      - name: Print tool versions
+        run: forge --version
+
+      - name: Run every fuzz property 100,000 times
+        run: forge test --match-path 'test/fuzz/*' -vvv
+
+  invariant:
+    name: Every invariant campaign, 1,000 runs of 100 calls
+    needs: changed
+    if: needs.changed.outputs.run == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      FOUNDRY_PROFILE: deep
+    steps:
+      - name: Check out the code and the pinned library submodules
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Install Foundry ${{ env.FOUNDRY_VERSION }}
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: ${{ env.FOUNDRY_VERSION }}
+
+      - name: Print tool versions
+        run: forge --version
+
+      - name: Run every invariant campaign, 1,000 runs of 100 calls
+        run: forge test --match-path 'test/invariant/*' -vvv

@@ -1,0 +1,203 @@
+# Continuous integration for the Manic Flash Option contract.
+#
+# Runs on every pull request and on every push to `dev` and `main`. A PR can be merged only when every job
+# is green. Foundry is pinned to the same version as local development (docs/adr/0004-toolchain.md).
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [dev, main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  FOUNDRY_VERSION: v1.8.7
+  # bulloak checks the tree tests (docs/CONVENTIONS.md §9). The release has no published checksum, so this SHA-256 of
+  # the Linux tarball was recorded when it was first downloaded (2026-11-10); a changed file fails the job.
+  BULLOAK_VERSION: v0.8.1
+  BULLOAK_SHA256: 1db5c21847d22c243956de05069951a53de2561861f950b65f3be20617dd6c74
+  # Slither (audit/static-analysis.md), pinned like the rest of the toolchain.
+  SLITHER_VERSION: 0.11.6
+
+jobs:
+  foundry:
+    name: Format, build, test
+    runs-on: ubuntu-latest
+    env:
+      # More fuzz and invariant runs than local development (see foundry.toml).
+      FOUNDRY_PROFILE: ci
+    steps:
+      - name: Check out the code and the pinned library submodules
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Install Foundry ${{ env.FOUNDRY_VERSION }}
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: ${{ env.FOUNDRY_VERSION }}
+
+      - name: Print tool versions
+        run: forge --version
+
+      - name: Check formatting
+        run: forge fmt --check
+
+      - name: Build and check contract sizes (fails above 98,304 bytes, Robinhood Chain's limit)
+        run: forge build --sizes
+
+      # abi/IManicFlashOption.json is what the backend and frontend build against, so it must always match the code.
+      - name: Check the committed ABI is current
+        run: forge inspect IManicFlashOption abi --json | diff - abi/IManicFlashOption.json
+
+      # docs/abi-reference.md lists every selector, topic and error id for the integrators; it is generated from the
+      # compiler, and must match it too.
+      - name: Check the ABI reference is current
+        run: python3 docs/tools/abi_tables.py | diff - docs/abi-reference.md
+
+      - name: Run tests
+        run: forge test -vvv
+
+  # OpenZeppelin's upgrades plugin on ManicFlashOption (test/upgrade/layout/README.md): the code must be upgrade-safe, must
+  # keep the storage layout of the commit it changes, and the plugin must pass or refuse each variant in
+  # test/upgrade/layout/variants/ exactly as its header says. It needs Node.js, and no FFI.
+  upgrades:
+    name: Upgrade safety (layout check)
+    runs-on: ubuntu-latest
+    steps:
+      # The whole history, so the base commit is there to build and compare with.
+      - name: Check out the code, its history and the pinned library submodules
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+          fetch-depth: 0
+
+      - name: Install Foundry ${{ env.FOUNDRY_VERSION }}
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: ${{ env.FOUNDRY_VERSION }}
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # A pull request runs on its merge into the base branch, so it is compared with the base's tip: the layout change
+      # the merge would bring. A push to dev or main is compared with the commit before it. A branch's first push has
+      # no commit before it (all zeros), and is checked without a base.
+      - name: Check every layout with the upgrades plugin
+        env:
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          if [ -n "$BASE" ] && [ "$BASE" != "0000000000000000000000000000000000000000" ]; then
+            python3 test/upgrade/layout/check.py --base "$BASE"
+          else
+            python3 test/upgrade/layout/check.py
+          fi
+
+  # Slither on src/ (audit/static-analysis.md). slither.config.json keeps it to src/, excludes the two detectors whose
+  # reason holds for the whole contract, and fails on any finding; every other accepted finding is marked in the code,
+  # with its reason. So any new finding fails the job.
+  slither:
+    name: Static analysis (Slither)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the code and the pinned library submodules
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Install Foundry ${{ env.FOUNDRY_VERSION }}
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: ${{ env.FOUNDRY_VERSION }}
+
+      - name: Install Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install Slither ${{ env.SLITHER_VERSION }}
+        run: pip install "slither-analyzer==${SLITHER_VERSION}"
+
+      - name: Run Slither on src/
+        run: slither .
+
+  # Coverage of src/ (audit/static-analysis.md): every line, function and branch must be reached, apart from the
+  # branches test/coverage/check.py lists as unreachable, each with its reason. The coverage build skips the optimizer,
+  # so the contract is bigger than Robinhood Chain's 98,304 bytes (the build job checks the real size) and costlier to
+  # run: the size and gas limits are lifted, and fuzz and invariant runs are fewer, since coverage counts what the tests
+  # reach, not how often. The gas benchmarks don't write their snapshots here: unoptimized, their numbers would be wrong.
+  coverage:
+    name: Coverage
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the code and the pinned library submodules
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Install Foundry ${{ env.FOUNDRY_VERSION }}
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: ${{ env.FOUNDRY_VERSION }}
+
+      # Two tests read the compiled ABI from out/ (the access matrix's and the interface's), which forge coverage
+      # doesn't write.
+      - name: Build
+        run: forge build
+
+      - name: Measure the coverage of src/
+        env:
+          FORGE_SNAPSHOT_EMIT: "false"
+          FOUNDRY_FUZZ_RUNS: 100
+          FOUNDRY_INVARIANT_RUNS: 8
+          FOUNDRY_GAS_LIMIT: "9223372036854775807"
+        run: >-
+          forge coverage --code-size-limit 1000000 --disable-block-gas-limit --no-match-coverage "(test|script|lib)/"
+          --report summary --report lcov --report-file lcov.info
+
+      - name: Check every line, function and reachable branch is covered
+        run: python3 test/coverage/check.py lcov.info
+
+  lint:
+    name: Lint (solhint, bulloak)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the code
+        uses: actions/checkout@v4
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # src/ and test/ have separate rule sets (.solhint.json and test/.solhint.json): production code must
+      # carry full NatSpec and strict naming; tests follow the test-naming rules in docs/CONVENTIONS.md §9.
+      - name: Lint src/
+        shell: bash
+        run: |
+          shopt -s globstar nullglob
+          files=(src/**/*.sol)
+          if [ ${#files[@]} -eq 0 ]; then echo "No contract files yet; nothing to lint."; exit 0; fi
+          npx --yes solhint@6.2.5 --disc -c .solhint.json --max-warnings 0 "${files[@]}"
+
+      - name: Lint test/
+        run: npx --yes solhint@6.2.5 --disc -c test/.solhint.json --max-warnings 0 'test/**/*.sol'
+
+      # The deploy scripts follow the test rules, except that their revert messages may be long: an operator reads them
+      # to learn which value a deployment got wrong (script/.solhint.json turns `reason-string` off).
+      - name: Lint script/
+        run: npx --yes solhint@6.2.5 --disc -c script/.solhint.json --max-warnings 0 'script/**/*.sol'
+
+      # Every test of a function with ordered checks follows its .tree file, branch for branch and in order.
+      - name: Check the tree tests (bulloak ${{ env.BULLOAK_VERSION }})
+        run: |
+          curl -sSfL --retry 3 -o bulloak.tar.gz \
+            "https://github.com/alexfertel/bulloak/releases/download/${BULLOAK_VERSION}/bulloak-x86_64-unknown-linux-gnu.tar.gz"
+          echo "${BULLOAK_SHA256}  bulloak.tar.gz" | sha256sum --check --strict
+          tar -xzf bulloak.tar.gz bulloak
+          ./bulloak check 'test/concrete/**/*.tree'

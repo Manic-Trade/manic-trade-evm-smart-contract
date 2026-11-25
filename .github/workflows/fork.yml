@@ -1,0 +1,60 @@
+# The fork tests (docs/ARCHITECTURE.md §13): the contract against the real USDG on a fork of Robinhood
+# Chain mainnet (chain id 4663), and the mock beside the real token, step by step (test/fork/).
+#
+# They run once a week, on a pull request that changes the contract, the mock or the fork tests, and on demand from the
+# Actions tab ("Run workflow"). Each week is worth running even when nothing was merged: it also catches the real
+# token changing under us. The public RPC needs no key, but keeps only minutes of state, so each run forks the latest
+# block, read once at the start so every test forks the same one. Elsewhere, `forge test` skips the fork tests.
+name: Fork tests
+
+on:
+  schedule:
+    # Sundays at 20:15 UTC, after the deep run starts. A scheduled run uses the default branch, `dev`.
+    - cron: "15 20 * * 0"
+  pull_request:
+    paths:
+      - "src/**"
+      - "test/fork/**"
+      - "test/mocks/MockUSDG.sol"
+      - "test/Base.t.sol"
+      - "test/SettlementBase.t.sol"
+      - ".github/workflows/fork.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: fork-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  FOUNDRY_VERSION: v1.8.7
+  ROBINHOOD_RPC_URL: https://rpc.mainnet.chain.robinhood.com
+
+jobs:
+  fork:
+    name: The contract and the mock against the real USDG
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      FOUNDRY_PROFILE: ci
+    steps:
+      - name: Check out the code and the pinned library submodules
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Install Foundry ${{ env.FOUNDRY_VERSION }}
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: ${{ env.FOUNDRY_VERSION }}
+
+      - name: Print tool versions
+        run: forge --version
+
+      - name: Fork the latest block, read once so every test forks the same one
+        run: |
+          block=$(cast block-number --rpc-url "$ROBINHOOD_RPC_URL")
+          echo "ROBINHOOD_FORK_BLOCK=$block" >> "$GITHUB_ENV"
+          echo "Forked Robinhood Chain mainnet at block $block." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Run the fork tests
+        run: forge test --match-path 'test/fork/*' -vvv
