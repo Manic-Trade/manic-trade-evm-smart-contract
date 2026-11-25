@@ -1,0 +1,29 @@
+RefundExpired_Concrete_Test
+├── given the refund is switched off
+│   └── it should revert
+└── given the refund is switched on
+    ├── when the batch is empty or holds more than 100 ids
+    │   └── it should revert
+    └── when the batch holds 1 to 100 ids
+        ├── when an id was never opened
+        │   └── it should revert
+        └── when every id was opened
+            ├── given a position has already ended
+            │   ├── it should skip it
+            │   └── it should refund the rest of the batch
+            └── given the positions are open
+                ├── when the delay has not passed since the expiry of a position
+                │   └── it should revert
+                └── when the delay has passed since the expiry of every open position
+                    ├── when a payout has too little gas
+                    │   └── it should revert
+                    └── when every payout has the gas it needs
+                        ├── given the token refuses a payout
+                        │   ├── it should keep the stake for the user to claim
+                        │   └── it should refund the rest of the batch
+                        └── given the token pays
+                            ├── it should return each stake to its user, with no fee
+                            ├── it should release each position's hold on the pool and leave free money unchanged
+                            ├── it should close each position
+                            ├── it should emit {PositionRefunded} for each, before its payout
+                            └── it should return the number refunded

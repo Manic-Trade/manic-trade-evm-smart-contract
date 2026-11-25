@@ -1,0 +1,29 @@
+Repay_Concrete_Test
+├── given the contract is halted
+│   └── it should revert
+└── given the contract is not halted
+    ├── when maxCount is zero or above 50
+    │   └── it should revert
+    └── when maxCount is 1 to 50
+        ├── given the queue is empty
+        │   └── it should change nothing
+        └── given someone is owed
+            ├── given there is no free money
+            │   └── it should change nothing
+            └── given there is free money
+                ├── when a payout has too little gas
+                │   └── it should revert
+                └── when every payout has the gas it needs
+                    ├── given the token refuses a payout
+                    │   ├── it should keep it for the owner to claim
+                    │   └── it should go on down the queue
+                    ├── given free money covers only part of the head
+                    │   ├── it should pay the head all the free money, less the winner fee
+                    │   ├── it should keep the rest owed at the head
+                    │   └── it should stop there
+                    └── given free money covers the head
+                        ├── it should close the head and move on to the next IOU
+                        ├── it should repay in queue order, at most maxCount
+                        ├── it should accrue the winner fees once
+                        ├── it should emit {OwedRepaid} for each repayment
+                        └── it should return the number repaid
