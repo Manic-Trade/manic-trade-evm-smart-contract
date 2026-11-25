@@ -66,7 +66,7 @@ repository yet.
   - invariant tests: every invariant of ARCHITECTURE §12 after every call, in two campaigns (the launch pool, and a
     small pool whose winners are owed);
   - the access-control matrix, each key's blast radius, and the fake-price loop the breaker stops;
-  - scenarios with exact numbers, to the base unit;
+  - scenarios with exact numbers, to the base unit, each number derived again by the model (`model/scenarios.py`);
   - the maths against a second implementation in Python (`model/`): 20,661 vectors of 24 functions
     (`test/fixtures/model/`), replayed by `test/model/ModelVectors.t.sol`;
   - EIP-712 signing vectors for the backend's signer (`test/fixtures/eip712_vectors.json`);
@@ -79,9 +79,9 @@ repository yet.
   `build_info.py`, which keeps the build machine's paths out of a committed build-info. Inputs in `script/config/`,
   outputs in `deployments/<chainId>.json`.
 - **CI:** formatting, the build and its size check, the tests, the committed ABI and ABI reference, the model's
-  vectors, the layout check, Slither, coverage (every line, function and reachable branch of `src/`), solhint and
-  bulloak, a gas check (no call more than 5% dearer than on the base branch), and weekly deep fuzz, invariant and fork
-  runs.
+  vectors and scenario derivations, the layout check, Slither, coverage (every line, function and reachable branch of
+  `src/`), solhint and bulloak, a gas check (no call more than 5% dearer than on the base branch), and weekly deep
+  fuzz, invariant and fork runs.
 - **Documentation:** the README, the architecture, the maths, the integration guide, the ABI reference, gas costs,
   the storage layout, the security checklist, the conventions, nine decision records, the runbooks (deploy, upgrade,
   relayer keys), the static-analysis report and the security policy.
