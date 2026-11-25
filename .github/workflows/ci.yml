@@ -63,6 +63,11 @@ jobs:
       - name: Check the model's vectors are current
         run: python3 model/generate_vectors.py --check
 
+      # Every number a scenario test asserts must be the one model/scenarios.py derives from the model, and every other
+      # literal of the test must be listed as an input (model/README.md, "The scenarios").
+      - name: Check the scenario tests' numbers against the model
+        run: python3 model/scenarios.py --check
+
       - name: Run tests
         run: forge test -vvv
 
