@@ -5,9 +5,11 @@ Fund_Concrete_Test
     ├── when the pool total would pass 64 bits
     │   └── it should revert
     └── when the pool total fits 64 bits
-        ├── when the token moves a different amount than asked
+        ├── when less than the amount arrives
         │   └── it should revert
-        └── when the token moves exactly the amount
+        ├── when more than the amount arrives
+        │   └── it should revert
+        └── when exactly the amount arrives
             ├── it should take the tokens from the funder, whoever it is
             ├── it should add them to the pool total as free money
             └── it should emit {PoolFunded}

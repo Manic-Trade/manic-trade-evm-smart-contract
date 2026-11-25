@@ -41,9 +41,11 @@ Open_Concrete_Test
                                                     ├── when the open gate blocks the bet
                                                     │   └── it should revert
                                                     └── when the open gate lets it in
-                                                        ├── when the stake does not arrive in full
+                                                        ├── when less than the stake arrives
                                                         │   └── it should revert
-                                                        └── when the stake arrives in full
+                                                        ├── when more than the stake arrives
+                                                        │   └── it should revert
+                                                        └── when exactly the stake arrives
                                                             ├── it should record the position
                                                             ├── it should hold the stake and its max profit in the books
                                                             ├── it should take exactly the stake from the user
