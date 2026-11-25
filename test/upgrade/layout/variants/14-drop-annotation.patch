@@ -1,0 +1,16 @@
+# Rule: §5 rule 9, the namespace annotation (no other check can see it)
+# Change: `Layout`'s `@custom:storage-location erc7201:manic.storage.FlashOption` removed
+# Expect: fail
+# Reason: Deleted namespace `erc7201:manic.storage.FlashOption`
+diff --git a/src/base/FlashOptionStorage.sol b/src/base/FlashOptionStorage.sol
+index d3bf959..5714b48 100644
+--- a/src/base/FlashOptionStorage.sol
++++ b/src/base/FlashOptionStorage.sol
+@@ -20,7 +20,6 @@ abstract contract FlashOptionStorage {
+     ///         markets, positions, the repay queue and the claimable balances.
+     /// @dev 14 slots: 9 of values and 5 mapping roots. New fields go at the end only, because `pool` and `breaker`
+     ///      are embedded structs that can't grow.
+-    /// @custom:storage-location erc7201:manic.storage.FlashOption
+     struct Layout {
+         // slot 0 (30 bytes)
+         IERC20 token; // the stablecoin (USDG), set once in initialize

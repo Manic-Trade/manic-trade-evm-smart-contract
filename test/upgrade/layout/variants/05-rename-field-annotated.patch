@@ -1,0 +1,65 @@
+# Rule: §5 rule 5, a renamed or retired field keeps its place, with `@custom:oz-renamed-from`
+# Change: `feeRecipient` renamed `treasury`, annotated with its old name
+# Expect: pass
+diff --git a/src/base/FlashOptionBase.sol b/src/base/FlashOptionBase.sol
+index 80c77ca..5809bbf 100644
+--- a/src/base/FlashOptionBase.sol
++++ b/src/base/FlashOptionBase.sol
+@@ -129,7 +129,7 @@ abstract contract FlashOptionBase is
+     function _setRecipients(address feeRecipient, address rewardsRecipient) internal {
+         if (feeRecipient == address(0) || rewardsRecipient == address(0)) revert ZeroAddress();
+         Layout storage $ = _getFlashOptionStorage();
+-        $.feeRecipient = feeRecipient;
++        $.treasury = feeRecipient;
+         $.rewardsRecipient = rewardsRecipient;
+         emit RecipientsUpdated(feeRecipient, rewardsRecipient);
+     }
+diff --git a/src/base/FlashOptionStorage.sol b/src/base/FlashOptionStorage.sol
+index d3bf959..a81cac1 100644
+--- a/src/base/FlashOptionStorage.sol
++++ b/src/base/FlashOptionStorage.sol
+@@ -29,7 +29,8 @@ abstract contract FlashOptionStorage {
+         uint16 marketCount; // the number of markets created, and so the next market's index
+         uint48 refundDelaySecs; // the safety refund delay after expiry (24 hours by default; 0 = off)
+         // slot 1
+-        address feeRecipient; // receives swept fees and seed recovery
++        /// @custom:oz-renamed-from feeRecipient
++        address treasury; // receives swept fees and seed recovery
+         // slot 2
+         address rewardsRecipient; // receives rewards withdrawals
+         // slots 3-6
+diff --git a/src/modules/PoolModule.sol b/src/modules/PoolModule.sol
+index 161b260..c837dfd 100644
+--- a/src/modules/PoolModule.sol
++++ b/src/modules/PoolModule.sol
+@@ -65,7 +65,7 @@ abstract contract PoolModule is IManicFlashOptionPool, FlashOptionBase {
+         address destination;
+         if (purpose == WithdrawPurpose.SeedRecovery) {
+             pool.seedRecovered = _add64(pool.seedRecovered, amount);
+-            destination = $.feeRecipient;
++            destination = $.treasury;
+         } else {
+             pool.rewardsWithdrawn = _add64(pool.rewardsWithdrawn, amount);
+             destination = $.rewardsRecipient;
+@@ -91,7 +91,7 @@ abstract contract PoolModule is IManicFlashOptionPool, FlashOptionBase {
+         uint64 amount = $.pool.feesPending;
+         if (amount == 0) revert InvalidAmount();
+         $.pool.feesPending = 0;
+-        address to = $.feeRecipient;
++        address to = $.treasury;
+         emit FeesSwept(to, amount);
+         $.token.safeTransfer(to, amount);
+     }
+diff --git a/src/modules/ViewsModule.sol b/src/modules/ViewsModule.sol
+index 5c0a815..c6bbeb9 100644
+--- a/src/modules/ViewsModule.sol
++++ b/src/modules/ViewsModule.sol
+@@ -131,7 +131,7 @@ abstract contract ViewsModule is IManicFlashOptionViews, FlashOptionBase {
+         returns (address feeRecipient, address rewardsRecipient)
+     {
+         Layout storage $ = _getFlashOptionStorage();
+-        return ($.feeRecipient, $.rewardsRecipient);
++        return ($.treasury, $.rewardsRecipient);
+     }
+ 
+     /// @inheritdoc IManicFlashOptionViews

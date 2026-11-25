@@ -1,0 +1,23 @@
+# Rule: CONVENTIONS §2, no immutables: an immutable lives in the implementation's code, not the proxy's storage
+# Change: `uint256 private immutable _DEPLOYED_AT`, set in the constructor
+# Expect: fail
+# Reason: Variable `_DEPLOYED_AT` is immutable and will be initialized on the implementation
+diff --git a/src/ManicFlashOption.sol b/src/ManicFlashOption.sol
+index a5d5e4b..1818951 100644
+--- a/src/ManicFlashOption.sol
++++ b/src/ManicFlashOption.sol
+@@ -37,10 +37,14 @@ contract ManicFlashOption is IManicFlashOption, AdminModule, TradingModule, Sett
+     uint8 private constant _MIN_TOKEN_DECIMALS = 6;
+     uint8 private constant _MAX_TOKEN_DECIMALS = 9;
+ 
++    /// @notice When this implementation was deployed.
++    uint256 private immutable _DEPLOYED_AT;
++
+     /// @notice Locks the implementation itself, so that nobody can initialize it and act as its admin. Only the
+     ///         proxy is ever initialized.
+     /// @custom:oz-upgrades-unsafe-allow constructor
+     constructor() {
++        _DEPLOYED_AT = block.timestamp;
+         _disableInitializers();
+     }
+ 

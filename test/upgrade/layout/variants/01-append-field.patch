@@ -1,0 +1,31 @@
+# Rule: §5 rule 1, append only; §4.2, the reinitializer
+# Change: `Layout` gains `uint64 newSetting` at its end, set by `initializeV2`, a `reinitializer(2)` only the upgrader can run (what test/mocks/ManicFlashOptionV2Mock.sol models)
+# Expect: pass
+diff --git a/src/ManicFlashOption.sol b/src/ManicFlashOption.sol
+index a5d5e4b..8b5cfd9 100644
+--- a/src/ManicFlashOption.sol
++++ b/src/ManicFlashOption.sol
+@@ -67,6 +67,11 @@ contract ManicFlashOption is IManicFlashOption, AdminModule, TradingModule, Sett
+         _setBreaker(p.breakerMaxNetProfit, p.breakerWindowSecs);
+     }
+ 
++    /// @notice V2's reinitializer: sets the field V2 appends, inside the upgrade's `upgradeToAndCall`.
++    function initializeV2(uint64 value) external reinitializer(2) onlyRole(UPGRADER_ROLE) {
++        _getFlashOptionStorage().newSetting = value;
++    }
++
+     /// @inheritdoc IManicFlashOptionViews
+     function version() external pure override returns (string memory) {
+         return _VERSION;
+diff --git a/src/base/FlashOptionStorage.sol b/src/base/FlashOptionStorage.sol
+index d3bf959..e57abae 100644
+--- a/src/base/FlashOptionStorage.sol
++++ b/src/base/FlashOptionStorage.sol
+@@ -43,6 +43,7 @@ abstract contract FlashOptionStorage {
+         mapping(uint64 seq => bytes32 positionId) iouQueue; // the repay queue, read from nextRepaySeq
+         mapping(address account => uint64 amount) claimable; // payouts whose transfer failed, waiting for claim
+         // new fields go below this line only
++        uint64 newSetting; // V2: a setting V1 doesn't have
+     }
+ 
+     /// @dev The namespace's slot: keccak256(abi.encode(uint256(keccak256("manic.storage.FlashOption")) - 1)) &

@@ -1,0 +1,17 @@
+# Rule: §5 rule 3, never change a fixed array's length
+# Change: `Market.durations` grows from 5 rules to 6
+# Expect: fail
+# Reason: Bad array resize from 5 to 6
+diff --git a/src/types/StorageTypes.sol b/src/types/StorageTypes.sol
+index ba62ff7..d5881fc 100644
+--- a/src/types/StorageTypes.sol
++++ b/src/types/StorageTypes.sol
+@@ -80,7 +80,7 @@ struct Market {
+     uint64 maxTotalOwed; // open gate: new bets are blocked while total owed exceeds this
+     uint16 leverage; // 1x to 10,000x; with marketId, the market's key, so set at creation and never changed
+     // slots 3-7
+-    DurationRule[5] durations; // the allowed durations; unused rules are all zero
++    DurationRule[6] durations; // the allowed durations; unused rules are all zero
+ }
+ 
+ /// @notice One bet, in `Layout.positions` under its `positionId`.

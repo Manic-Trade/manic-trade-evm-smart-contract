@@ -1,0 +1,20 @@
+# Rule: §5 rule 6, never reorder an enum: a stored `Owed` would read as `Closed`
+# Change: `Status`'s `Owed` and `Closed` swapped
+# Expect: fail
+# Reason: Deleted `Owed`
+# Reason: Inserted `Owed`
+diff --git a/src/types/StorageTypes.sol b/src/types/StorageTypes.sol
+index ba62ff7..f323144 100644
+--- a/src/types/StorageTypes.sol
++++ b/src/types/StorageTypes.sol
+@@ -34,8 +34,8 @@ enum WithdrawPurpose {
+ enum Status {
+     None,
+     Open,
+-    Owed,
+-    Closed
++    Closed,
++    Owed
+ }
+ 
+ /// @notice An allowed position duration and the range of liquidation distances θ a bet of that length may have.
