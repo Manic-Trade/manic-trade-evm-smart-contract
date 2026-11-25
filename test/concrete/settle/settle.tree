@@ -1,0 +1,51 @@
+Settle_Concrete_Test
+├── when the caller is not a settler
+│   └── it should revert
+└── when the caller is a settler
+    ├── given the contract is halted
+    │   └── it should revert
+    └── given the contract is not halted
+        ├── when the batch is empty or holds more than 100 ids
+        │   └── it should revert
+        └── when the batch holds 1 to 100 ids
+            ├── when the market does not exist
+            │   └── it should revert
+            └── when the market exists
+                ├── when the price is not positive
+                │   └── it should revert
+                └── when the price is positive
+                    ├── when the tick is more than the clock skew ahead
+                    │   └── it should revert
+                    └── when the tick is at most the clock skew ahead
+                        ├── when an id was never opened
+                        │   └── it should revert
+                        └── when every id was opened
+                            ├── when a position belongs to another market
+                            │   └── it should revert
+                            └── when every position belongs to the market
+                                ├── given a position has already ended
+                                │   ├── it should skip it
+                                │   └── it should settle the others
+                                └── given every position is open
+                                    ├── when the tick is not a position's expiry second
+                                    │   └── it should revert
+                                    └── when the tick is every position's expiry second
+                                        ├── when the price touches a position's line
+                                        │   └── it should revert
+                                        └── when the price touches no line
+                                            ├── when a payout has too little gas
+                                            │   └── it should revert
+                                            └── when every payout has the gas it needs
+                                                ├── given the token refuses a payout
+                                                │   ├── it should keep the payout for the user to claim
+                                                │   └── it should settle the rest of the batch
+                                                ├── given the pool cannot pay a profit in full
+                                                │   ├── it should pay the profit free money allows
+                                                │   ├── it should queue the rest as an IOU
+                                                │   └── it should keep the position as owed
+                                                └── given the pool can pay every profit
+                                                    ├── it should close each position
+                                                    ├── it should pay each user the payout, less the fees
+                                                    ├── it should accrue the fees once
+                                                    ├── it should emit {PositionSettled} for each
+                                                    └── it should return the number settled
