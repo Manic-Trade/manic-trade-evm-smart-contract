@@ -1,0 +1,16 @@
+Pay_Concrete_Test
+├── when the amount is zero
+│   └── it should do nothing
+└── when the amount is not zero
+    ├── when less than the minimum payout gas is left
+    │   └── it should revert
+    └── when at least the minimum payout gas is left
+        ├── when the transfer succeeds
+        │   └── it should pay the recipient
+        └── when the transfer fails
+            ├── when the transfer ran out of gas
+            │   └── it should revert
+            └── when the token refused it
+                ├── it should add the amount to the recipient's claimable balance
+                ├── it should add it to the total claimable
+                └── it should emit {PayoutDeferred}

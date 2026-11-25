@@ -1,0 +1,10 @@
+Claim_Concrete_Test
+├── when the account has nothing to claim
+│   └── it should revert
+└── when the account has a claimable balance
+    ├── when the transfer to the account fails
+    │   └── it should revert
+    └── when the transfer succeeds
+        ├── it should pay the account, whoever calls
+        ├── it should clear the account's balance and lower the total claimable
+        └── it should emit {Claimed}

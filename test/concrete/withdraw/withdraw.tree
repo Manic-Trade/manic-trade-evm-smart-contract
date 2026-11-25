@@ -1,0 +1,26 @@
+Withdraw_Concrete_Test
+├── when the caller is not the admin
+│   └── it should revert
+└── when the caller is the admin
+    ├── when the amount is zero
+    │   └── it should revert
+    └── when the amount is not zero
+        ├── given winners are owed
+        │   └── it should revert
+        └── given nobody is owed
+            ├── when free money would fall below the floor
+            │   └── it should revert
+            └── when free money stays at or above the floor
+                ├── when the open bets' max profit would be left uncovered
+                │   └── it should revert
+                └── when the open bets stay covered
+                    ├── when seed recovery would pass 500 whole tokens
+                    │   └── it should revert
+                    └── when the withdrawal is within every limit
+                        ├── when the transfer to the recipient fails
+                        │   └── it should revert
+                        └── when the transfer succeeds
+                            ├── it should take the amount out of the pool total
+                            ├── it should add it to the purpose's counter
+                            ├── it should send it to the purpose's recipient
+                            └── it should emit {PoolWithdrawn}
