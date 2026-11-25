@@ -277,3 +277,104 @@ contract CheckSell_LeverageMath_Unit_Test is LeverageMath_Unit_Shared_Test {
         math.checkSell(V.STAKE, 13_000, valuation, sellAmount, minAmount, 600, totalOwed, free);
     }
 }
+
+/// @notice `checkWithdraw`: an admin withdrawal, checked in order, including the open-exposure check.
+contract CheckWithdraw_LeverageMath_Unit_Test is LeverageMath_Unit_Shared_Test {
+    WithdrawPurpose internal constant REWARDS = WithdrawPurpose.Rewards;
+    WithdrawPurpose internal constant SEED = WithdrawPurpose.SeedRecovery;
+
+    // $1,500 free over the $500 floor, a 6-decimal token: $1,000 can go, and the seed at most $500. Unless a test says
+    // otherwise, no bets are open (openMaxProfit = 0), so the open-exposure check can't fail.
+
+    /// @dev Rewards: down to the floor exactly, not one unit past it, and no cap of their own.
+    function test_RewardsCanGoDownToTheFloorExactly() public {
+        _withdraw(REWARDS, V.usdc(1000), 0, 0);
+        _withdraw(REWARDS, V.usdc(1000), 0, V.usdc(500)); // the seed cap is not theirs
+        vm.expectRevert(E.BelowPoolFloor.selector);
+        _withdraw(REWARDS, V.usdc(1000) + 1, 0, 0);
+        vm.expectRevert(E.BelowPoolFloor.selector);
+        _withdraw(REWARDS, V.usdc(1500) + 1, 0, 0); // more than free
+        vm.expectRevert(E.BelowPoolFloor.selector);
+        _withdraw(REWARDS, type(uint64).max, 0, 0);
+    }
+
+    /// @dev Seed recovery: $500 in total, in one go or in parts, never one unit more.
+    function test_SeedRecoveryIsCappedAtFiveHundredTokensInTotal() public {
+        _withdraw(SEED, V.usdc(500), 0, 0);
+        _withdraw(SEED, V.usdc(200), 0, V.usdc(300));
+        vm.expectRevert(E.SeedRecoveryExceeded.selector);
+        _withdraw(SEED, V.usdc(500) + 1, 0, 0);
+        vm.expectRevert(E.SeedRecoveryExceeded.selector);
+        _withdraw(SEED, V.usdc(200) + 1, 0, V.usdc(300));
+        vm.expectRevert(E.SeedRecoveryExceeded.selector);
+        _withdraw(SEED, 1, 0, V.usdc(500));
+        vm.expectRevert(E.SeedRecoveryExceeded.selector);
+        _withdraw(SEED, 1, 0, type(uint64).max); // no overflow
+    }
+
+    /// @dev ...and the floor binds seed recovery too: $900 free leaves $400 to recover.
+    function test_TheFloorAlsoBindsSeedRecovery() public {
+        math.checkWithdraw(SEED, V.usdc(400), V.usdc(900), 0, V.FLOOR, 0, 0, 6);
+        vm.expectRevert(E.BelowPoolFloor.selector);
+        math.checkWithdraw(SEED, V.usdc(400) + 1, V.usdc(900), 0, V.FLOOR, 0, 0, 6);
+    }
+
+    /// @dev The order: the amount, then the queue, then the floor, then the seed cap.
+    function test_ChecksRunInOrder() public {
+        WithdrawPurpose[2] memory purposes = [SEED, REWARDS];
+        for (uint256 i; i < purposes.length; ++i) {
+            vm.expectRevert(E.InvalidAmount.selector);
+            _withdraw(purposes[i], 0, 1, 0);
+            vm.expectRevert(E.OwedOutstanding.selector);
+            _withdraw(purposes[i], type(uint64).max, 1, type(uint64).max);
+            _withdraw(purposes[i], V.usdc(100), 0, 0);
+            vm.expectRevert(E.OwedOutstanding.selector);
+            _withdraw(purposes[i], V.usdc(100), 1, 0);
+        }
+        vm.expectRevert(E.BelowPoolFloor.selector);
+        _withdraw(SEED, V.usdc(1000) + 1, 0, V.usdc(500));
+    }
+
+    /// @dev The seed cap follows the token's decimals. 500 × 10^17 doesn't fit `uint64`, so 17 decimals overflow (a
+    ///      pool can't be created with such a token anyway).
+    function test_TheSeedCapFollowsTheDecimals() public {
+        uint64 max = type(uint64).max;
+        math.checkWithdraw(SEED, 500, max, 0, 0, 0, 0, 0);
+        math.checkWithdraw(SEED, 500_000_000_000, max, 0, 0, 0, 0, 9);
+        math.checkWithdraw(REWARDS, 1, max, 0, 0, 0, 0, 17); // rewards don't compute the cap
+        vm.expectRevert(E.SeedRecoveryExceeded.selector);
+        math.checkWithdraw(SEED, 501, max, 0, 0, 0, 0, 0);
+        vm.expectRevert(E.SeedRecoveryExceeded.selector);
+        math.checkWithdraw(SEED, 500_000_000_001, max, 0, 0, 0, 0, 9);
+        vm.expectRevert(E.MathOverflow.selector);
+        math.checkWithdraw(SEED, 1, max, 0, 0, 0, 0, 17);
+        vm.expectRevert(E.MathOverflow.selector);
+        math.checkWithdraw(SEED, 1, max, 0, 0, 0, 0, 255); // no 256-bit overflow either
+    }
+
+    /// @dev What stays above the floor must still cover every open bet's max profit. With $1,500 free, a $500 floor and
+    ///      $300 of open max profit, $700 can go and one base unit more can't.
+    function test_AWithdrawalMustLeaveOpenBetsCovered() public {
+        uint64 openMaxProfit = V.usdc(300);
+        math.checkWithdraw(REWARDS, V.usdc(700), V.usdc(1500), 0, V.FLOOR, openMaxProfit, 0, 6);
+        vm.expectRevert(E.OpenExposureNotCovered.selector);
+        math.checkWithdraw(REWARDS, V.usdc(700) + 1, V.usdc(1500), 0, V.FLOOR, openMaxProfit, 0, 6);
+    }
+
+    /// @dev The open-exposure check's place in the order: after the floor check, before the seed cap.
+    function test_TheExposureCheckRunsAfterTheFloorAndBeforeTheSeedCap() public {
+        // Past the floor: the floor error wins, whatever the exposure.
+        vm.expectRevert(E.BelowPoolFloor.selector);
+        math.checkWithdraw(SEED, V.usdc(1000) + 1, V.usdc(1500), 0, V.FLOOR, type(uint64).max, 0, 6);
+        // Within the floor but over the exposure and over the seed cap: the exposure error wins.
+        vm.expectRevert(E.OpenExposureNotCovered.selector);
+        math.checkWithdraw(SEED, V.usdc(600), V.usdc(1500), 0, V.FLOOR, V.usdc(500), 0, 6);
+        // Within the exposure, over the seed cap: the seed error.
+        vm.expectRevert(E.SeedRecoveryExceeded.selector);
+        math.checkWithdraw(SEED, V.usdc(600), V.usdc(1500), 0, V.FLOOR, V.usdc(400), 0, 6);
+    }
+
+    function _withdraw(WithdrawPurpose purpose, uint64 amount, uint64 totalOwed, uint64 seedRecovered) internal view {
+        math.checkWithdraw(purpose, amount, V.usdc(1500), totalOwed, V.FLOOR, 0, seedRecovered, 6);
+    }
+}
