@@ -219,9 +219,10 @@ warning as an error.
 - Keys: `--account` (keystore) on testnet, `--ledger`/Safe on mainnet. Never put a private key in `.env`.
 - Every script ends with assertions that revert on any mismatch (roles, config, implementation slot, domain,
   disabled markets, code size).
-- After a deployment, copy the `upgrades` profile's `build-info/` to `deployments/<chainId>/build-info-v<version>/` and
-  commit it, together with `broadcast/` for that chain, once `script/bytecode.py` shows it is the deployed code
-  (docs/runbooks/deploy-testnet.md, step 6). Never commit `cache/`.
+- After a deployment, copy the `upgrades` profile's `build-info/` to `deployments/<chainId>/build-info-v<version>/`,
+  run `script/build_info.py` on it (no local path is committed), and commit it, together with `broadcast/` for that
+  chain, once `script/bytecode.py` shows it is the deployed code (docs/runbooks/deploy-testnet.md, step 6). Never
+  commit `cache/`.
 - Scripts send from the address chains.toml names (`vm.startBroadcast(address)`), so a test runs the same `run()`
   with no key. On anvil, its well-known test keys may go on the command line; nowhere else.
 - Revert messages in scripts may be long: an operator reads them to learn which value is wrong.

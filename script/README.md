@@ -40,6 +40,10 @@ Each script reads `deployments/<chainId>.json` and writes it back:
 See [`deployments/README.md`](../deployments/README.md). The anvil record, `31337.json`, is git-ignored. `forge test`
 writes it too (its chain id is anvil's), so run the tests after a rehearsal, not during one.
 
+**The build-info** of each deployed implementation is kept in `deployments/<chainId>/build-info-v<version>/`, for the
+upgrade check. Foundry records the build folder's absolute path in it (`input.basePath`, `allowPaths` and
+`includePaths`), so `build_info.py` rewrites that to `.` before it is committed. The compiler's output is unchanged.
+
 ## Keys
 
 - **Every script sends from the chain's `deployer`**, or from its `upgrader`, or its first opener and settler
