@@ -1,0 +1,17 @@
+# Rule: §5 rule 6, enums are append-only
+# Change: `Status` gains a member, `Archived`, after `Closed`
+# Expect: pass
+diff --git a/src/types/StorageTypes.sol b/src/types/StorageTypes.sol
+index ba62ff7..b2a884c 100644
+--- a/src/types/StorageTypes.sol
++++ b/src/types/StorageTypes.sol
+@@ -35,7 +35,8 @@ enum Status {
+     None,
+     Open,
+     Owed,
+-    Closed
++    Closed,
++    Archived
+ }
+ 
+ /// @notice An allowed position duration and the range of liquidation distances θ a bet of that length may have.

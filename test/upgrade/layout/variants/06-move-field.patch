@@ -1,0 +1,19 @@
+# Rule: §5 rule 1, never reorder
+# Change: `claimable` moved above `iouQueue`
+# Expect: fail
+# Reason: Deleted `iouQueue`
+# Reason: Inserted `iouQueue`
+diff --git a/src/base/FlashOptionStorage.sol b/src/base/FlashOptionStorage.sol
+index d3bf959..2c4bb0f 100644
+--- a/src/base/FlashOptionStorage.sol
++++ b/src/base/FlashOptionStorage.sol
+@@ -40,8 +40,8 @@ abstract contract FlashOptionStorage {
+         mapping(uint16 index => Market market) markets; // index 0 to marketCount - 1
+         mapping(bytes32 marketKey => uint16 indexPlusOne) marketIndexPlusOne; // keccak256(feed, leverage); 0 = unknown
+         mapping(bytes32 positionId => Position position) positions; // a used id is never removed
+-        mapping(uint64 seq => bytes32 positionId) iouQueue; // the repay queue, read from nextRepaySeq
+         mapping(address account => uint64 amount) claimable; // payouts whose transfer failed, waiting for claim
++        mapping(uint64 seq => bytes32 positionId) iouQueue; // the repay queue, read from nextRepaySeq
+         // new fields go below this line only
+     }
+ 

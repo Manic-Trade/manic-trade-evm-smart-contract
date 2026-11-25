@@ -1,0 +1,66 @@
+# Rule: §5 rule 4, never change a field's type, even to one of the same size
+# Change: `Position.entryPrice` becomes a `uint64`, with the casts that make it compile: a negative price would read as a huge one
+# Expect: fail
+# Reason: Upgraded `entryPrice` to an incompatible type
+# Reason: Bad upgrade from int64 to uint64
+diff --git a/src/modules/SettlementModule.sol b/src/modules/SettlementModule.sol
+index 1e0da82..263ec1f 100644
+--- a/src/modules/SettlementModule.sol
++++ b/src/modules/SettlementModule.sol
+@@ -244,7 +244,7 @@ abstract contract SettlementModule is IManicFlashOptionSettlement, FlashOptionBa
+         e.finalPrice = b.price;
+         e.publishTime = b.publishTime;
+         e.gBps = LeverageMath.gBps({
+-            entry: p.entryPrice,
++            entry: int64(p.entryPrice),
+             price: b.price,
+             side: e.side,
+             leverage: p.leverage, // the bet's own, copied from its market at open
+diff --git a/src/modules/TradingModule.sol b/src/modules/TradingModule.sol
+index 5482a81..5d62e66 100644
+--- a/src/modules/TradingModule.sol
++++ b/src/modules/TradingModule.sol
+@@ -134,7 +134,7 @@ abstract contract TradingModule is IManicFlashOptionTrading, FlashOptionBase {
+         p.startTime = t.entryPublishTime;
+         p.durationSecs = o.durationSecs;
+         p.stake = o.stake;
+-        p.entryPrice = t.entryPrice;
++        p.entryPrice = uint64(t.entryPrice);
+         p.liqPrice = liqPrice;
+         p.floorBps = t.floorBps;
+         p.capBps = t.capBps;
+@@ -394,7 +394,7 @@ abstract contract TradingModule is IManicFlashOptionTrading, FlashOptionBase {
+         if (LeverageMath.touched(t.price, p.liqPrice, p.side)) revert LiquidateInstead(s.positionId);
+         e.stake = p.stake;
+         e.gNowBps = LeverageMath.gBps({
+-            entry: p.entryPrice,
++            entry: int64(p.entryPrice),
+             price: t.price,
+             side: p.side,
+             leverage: p.leverage, // the bet's own, copied from its market at open
+diff --git a/src/modules/ViewsModule.sol b/src/modules/ViewsModule.sol
+index 5c0a815..ed357c2 100644
+--- a/src/modules/ViewsModule.sol
++++ b/src/modules/ViewsModule.sol
+@@ -32,7 +32,7 @@ abstract contract ViewsModule is IManicFlashOptionViews, FlashOptionBase {
+         // Only an open position or an IOU still holds its terms, its leverage among them; a closed one has cleared
+         // them.
+         if (position.status == Status.Open || position.status == Status.Owed) {
+-            capPrice = LeverageMath.capLine(position.entryPrice, position.side, position.leverage, position.capBps);
++            capPrice = LeverageMath.capLine(int64(position.entryPrice), position.side, position.leverage, position.capBps);
+         }
+     }
+ 
+diff --git a/src/types/StorageTypes.sol b/src/types/StorageTypes.sol
+index ba62ff7..4615b79 100644
+--- a/src/types/StorageTypes.sol
++++ b/src/types/StorageTypes.sol
+@@ -101,7 +101,7 @@ struct Position {
+     uint16 durationSecs; // endTime = startTime + durationSecs
+     // slot 1: cleared when the position closes (30 bytes)
+     uint64 stake; // the margin, held in the pool while the position is open
+-    int64 entryPrice; // the entry tick's price, at the market's exponent
++    uint64 entryPrice; // the entry tick's price, at the market's exponent
+     int64 liqPrice; // touching this price (equality counts) liquidates the bet
+     uint16 floorBps; // the least a right call pays, in bps of the stake
+     uint16 capBps; // the most the bet pays, in bps of the stake

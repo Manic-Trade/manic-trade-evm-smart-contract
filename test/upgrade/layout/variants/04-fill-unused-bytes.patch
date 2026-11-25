@@ -1,0 +1,15 @@
+# Rule: §5 rule 1 forbids it, but nothing moves, so the plugin accepts it
+# Change: `uint64 newSetting` inserted after `rewardsRecipient`, into slot 2's 12 unused bytes; review, not this check, enforces §5's stricter rule
+# Expect: pass
+diff --git a/src/base/FlashOptionStorage.sol b/src/base/FlashOptionStorage.sol
+index d3bf959..fe12ef4 100644
+--- a/src/base/FlashOptionStorage.sol
++++ b/src/base/FlashOptionStorage.sol
+@@ -32,6 +32,7 @@ abstract contract FlashOptionStorage {
+         address feeRecipient; // receives swept fees and seed recovery
+         // slot 2
+         address rewardsRecipient; // receives rewards withdrawals
++        uint64 newSetting; // fills 8 of slot 2's 12 unused bytes
+         // slots 3-6
+         PoolState pool; // the books
+         // slots 7-8
