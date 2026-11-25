@@ -2,15 +2,18 @@
 pragma solidity 0.8.38;
 
 import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
+import {ManicFlashOption} from "../../../src/ManicFlashOption.sol";
 import {IManicFlashOptionErrors as Errors} from "../../../src/interfaces/IManicFlashOptionErrors.sol";
 import {IManicFlashOptionEvents as Events} from "../../../src/interfaces/IManicFlashOptionEvents.sol";
 import {LeverageMath} from "../../../src/libraries/LeverageMath.sol";
 import {TradingModule} from "../../../src/modules/TradingModule.sol";
 import {OpenOrder, OpenTerms, StakeAuth} from "../../../src/types/OrderTypes.sol";
-import {ConfigParams} from "../../../src/types/ParamTypes.sol";
+import {ConfigParams, InitParams} from "../../../src/types/ParamTypes.sol";
 import {PoolState, Position, Side, Status} from "../../../src/types/StorageTypes.sol";
 import {Base_Test} from "../../Base.t.sol";
+import {MockReentrantToken} from "../../mocks/MockReentrantToken.sol";
 import {MockUSDG} from "../../mocks/MockUSDG.sol";
 import {Defaults} from "../../utils/Defaults.sol";
 import {LayoutReader} from "../../utils/LayoutReader.sol";
@@ -404,7 +407,7 @@ contract Open_Concrete_Test is Base_Test {
         _;
     }
 
-    function test_RevertWhen_TheStakeDoesNotArriveInFull()
+    function test_RevertWhen_LessThanTheStakeArrives()
         external
         whenTheCallerIsAnOpener
         givenTheContractIsNotHalted
@@ -439,7 +442,46 @@ contract Open_Concrete_Test is Base_Test {
         }
     }
 
-    function test_WhenTheStakeArrivesInFull()
+    function test_RevertWhen_MoreThanTheStakeArrives()
+        external
+        whenTheCallerIsAnOpener
+        givenTheContractIsNotHalted
+        whenTheOrderHasNotExpired
+        whenTheMarketExists
+        givenTheMarketIsEnabled
+        givenTheMarketIsNotPaused
+        givenTheBreakerHasNotTripped
+        whenThePositionIdIsNew
+        whenTheSignatureIsTheUsers
+        whenTheTermsAreInsideTheMarketsBounds
+        whenTheEntryTickIsFresh
+        whenTheEntryTickIsAtOrAfterTheOrder
+        whenTheEntryPriceIsPositive
+        whenTheOpenGateLetsItIn
+    {
+        // it should revert: one base unit more than the stake arrived during the pull
+        (MockReentrantToken token, ManicFlashOption proxy) = _proxyOnAReentrantToken();
+        OpenOrder memory o = _order(users.alice, keccak256("alice's bet"));
+        bytes memory signature = _signOrder(proxy, aliceKey, o);
+        OpenTerms memory t = _terms();
+        StakeAuth memory a; // the mock doesn't check the authorisation
+        // Armed, the token mints one more base unit to the contract from inside the pull, before the stake moves.
+        token.setCallback(address(token), abi.encodeCall(MockReentrantToken.mint, (address(proxy), 1)));
+        vm.expectRevert(abi.encodeWithSelector(Errors.TransferAmountMismatch.selector, o.stake, uint256(o.stake) + 1));
+        vm.prank(users.opener);
+        proxy.open(o, signature, t, a);
+        assertEq(uint8(LayoutReader.position(address(proxy), o.positionId).status), uint8(Status.None), "not opened");
+        assertEq(token.balanceOf(address(proxy)), FREE, "nothing arrived");
+
+        // Disarmed, the same order opens: the refusal was the extra unit's.
+        token.setCallback(address(0), "");
+        vm.prank(users.opener);
+        proxy.open(o, signature, t, a);
+        assertEq(LayoutReader.pool(address(proxy)).total, uint256(FREE) + o.stake, "the total holds exactly the stake");
+        assertEq(token.balanceOf(address(proxy)), uint256(FREE) + o.stake, "the balance rose by exactly the stake");
+    }
+
+    function test_WhenExactlyTheStakeArrives()
         external
         whenTheCallerIsAnOpener
         givenTheContractIsNotHalted
@@ -501,6 +543,25 @@ contract Open_Concrete_Test is Base_Test {
 
     /// @dev The token refuses the pull, with its own error: the authorisation is bob's (USDG names this error
     ///      `InvalidSignature` too), it has expired or isn't valid yet, she is frozen, or the token is paused.
+    /// @dev A second proxy, on a token that can call back from inside a pull (`MockReentrantToken`, disarmed), with the
+    ///      same free money, the BTC market switched on, and alice holding her stake.
+    function _proxyOnAReentrantToken() private returns (MockReentrantToken token, ManicFlashOption proxy) {
+        token = new MockReentrantToken();
+        InitParams memory p = _defaultInitParams();
+        p.token = IERC20(address(token));
+        proxy = ManicFlashOption(_deployProxy(p));
+        token.mint(users.bob, FREE);
+        vm.startPrank(users.bob);
+        token.approve(address(proxy), FREE);
+        proxy.fund(FREE);
+        vm.stopPrank();
+        vm.prank(users.admin);
+        proxy.createMarket(Defaults.BTC, Defaults.LEVERAGE, Defaults.PRICE_EXPONENT, Defaults.marketConfig());
+        vm.prank(users.operator);
+        proxy.setConfig(Defaults.BTC, Defaults.LEVERAGE, _enabledConfig());
+        token.mint(users.alice, Defaults.STAKE);
+    }
+
     function _expectTheTokensRefusals() private {
         Attempt memory x = _attempt(keccak256("bet 4"));
         x.a = _stakeAuth(flashOption, bobKey, x.o);

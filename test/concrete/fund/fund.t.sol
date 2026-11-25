@@ -9,6 +9,7 @@ import {IManicFlashOptionEvents as Events} from "../../../src/interfaces/IManicF
 import {InitParams} from "../../../src/types/ParamTypes.sol";
 import {Base_Test} from "../../Base.t.sol";
 import {MockFeeOnTransferToken} from "../../mocks/MockFeeOnTransferToken.sol";
+import {MockReentrantToken} from "../../mocks/MockReentrantToken.sol";
 import {LayoutReader} from "../../utils/LayoutReader.sol";
 
 /// @title Fund_Concrete_Test
@@ -39,11 +40,7 @@ contract Fund_Concrete_Test is Base_Test {
         _;
     }
 
-    function test_RevertWhen_TheTokenMovesADifferentAmountThanAsked()
-        external
-        whenTheAmountIsNotZero
-        whenThePoolTotalFits64Bits
-    {
+    function test_RevertWhen_LessThanTheAmountArrives() external whenTheAmountIsNotZero whenThePoolTotalFits64Bits {
         // it should revert: this token burns 1 unit of every transfer, so 99 of the 100 arrive
         MockFeeOnTransferToken feeToken = new MockFeeOnTransferToken();
         InitParams memory p = _defaultInitParams();
@@ -57,7 +54,29 @@ contract Fund_Concrete_Test is Base_Test {
         vm.stopPrank();
     }
 
-    function test_WhenTheTokenMovesExactlyTheAmount() external whenTheAmountIsNotZero whenThePoolTotalFits64Bits {
+    function test_RevertWhen_MoreThanTheAmountArrives() external whenTheAmountIsNotZero whenThePoolTotalFits64Bits {
+        // it should revert: this token mints 1 more unit to the contract from inside the transfer, so 101 arrive
+        MockReentrantToken token = new MockReentrantToken();
+        InitParams memory p = _defaultInitParams();
+        p.token = IERC20(address(token));
+        ManicFlashOption proxy = ManicFlashOption(_deployProxy(p));
+        token.mint(users.alice, 100);
+        token.setCallback(address(token), abi.encodeCall(MockReentrantToken.mint, (address(proxy), 1)));
+        vm.startPrank(users.alice);
+        token.approve(address(proxy), 100);
+        vm.expectRevert(abi.encodeWithSelector(Errors.TransferAmountMismatch.selector, 100, 101));
+        proxy.fund(100);
+        vm.stopPrank();
+        assertEq(token.balanceOf(address(proxy)), 0, "nothing arrived");
+
+        // Disarmed, the same call funds the pool: the refusal was the extra unit's.
+        token.setCallback(address(0), "");
+        vm.prank(users.alice);
+        proxy.fund(100);
+        assertEq(LayoutReader.pool(address(proxy)).total, 100, "the total holds exactly the amount");
+    }
+
+    function test_WhenExactlyTheAmountArrives() external whenTheAmountIsNotZero whenThePoolTotalFits64Bits {
         uint256[3] memory restBefore = [
             LayoutReader.word(address(flashOption), 4),
             LayoutReader.word(address(flashOption), 5),
