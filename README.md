@@ -69,7 +69,7 @@ behind the main choices are in [`docs/adr/`](docs/adr/README.md) (architecture d
 | [`docs/`](docs/) | The design, the maths and the guides (below) |
 | [`abi/`](abi/README.md) | The contract's ABI for the backend and the frontend, kept current by CI |
 | [`deployments/`](deployments/README.md) | The record of each deployment: addresses, version, start block and build-info |
-| [`audit/`](audit/README.md) | Static analysis and coverage: every finding, and how it was resolved |
+| [`audit/`](audit/README.md) | Static analysis, coverage and mutation testing: every finding, and how it was resolved |
 | `snapshots/` | The gas benchmarks' numbers, checked by CI |
 | `lib/` | Dependencies, as git submodules pinned to release tags |
 

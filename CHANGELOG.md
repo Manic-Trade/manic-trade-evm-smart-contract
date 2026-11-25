@@ -73,7 +73,8 @@ repository yet.
   - fork tests against the real USDG on Robinhood Chain mainnet, run weekly;
   - an upgrade over real state, and OpenZeppelin's layout check against 15 variant patches;
   - gas benchmarks (`snapshots/ManicFlashOption.json`, `docs/gas.md`);
-  - the deploy scripts' own tests.
+  - the deploy scripts' own tests;
+  - a mutation run: 35 single-point bugs put into `src/`, each caught by the tests (`audit/mutation.md`).
 - **Scripts:** `DeployMockUsdg`, `Deploy`, `Configure`, `Upgrade` and `Smoke`, each checking its result on chain;
   `smoke.py`, every way a bet ends on a live chain; `bytecode.py`, which checks the deployed code is the build;
   `build_info.py`, which keeps the build machine's paths out of a committed build-info. Inputs in `script/config/`,

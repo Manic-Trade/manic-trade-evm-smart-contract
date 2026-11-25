@@ -997,6 +997,7 @@ fuzz and invariant runs. `test/README.md` describes each folder.
 | Gas | `test/gas/Gas.t.sol`: each call's execution and calldata gas, from cold state, worst case ([gas.md](gas.md)) | CI fails if the snapshots or gas.md drift, or a number rises over 5% above the base (label `gas-regression-accepted` for a deliberate rise) |
 | Coverage gate | `forge coverage` of `src/`: every line, function and reachable branch; the one unreachable branch (`toUint16`'s guard, behind `gBps`' clamp) is listed with its reason in `test/coverage/check.py`, which fails if a test ever takes it | CI's Coverage job |
 | Static analysis | Slither 0.11.6 on `src/` (triage: `audit/static-analysis.md`), `forge lint`, solhint | CI fails on any new finding or warning |
+| Mutation | [audit/mutation.md](../audit/mutation.md): 35 single-point bugs put into `src/` one at a time (rounding, comparisons, dropped checks, roles), each making at least one test fail | By hand, before a release; last run on v1.0.0 |
 
 ---
 
