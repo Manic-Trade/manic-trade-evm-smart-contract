@@ -1,0 +1,9 @@
+ResetBreaker_Concrete_Test
+├── when the caller is not the operator
+│   └── it should revert
+└── when the caller is the operator
+    ├── it should clear a trip
+    ├── it should zero both counters and start the window now
+    ├── it should leave the limit and the window's length alone
+    ├── it should let open and sell work again
+    └── it should emit {CircuitBreakerReset}

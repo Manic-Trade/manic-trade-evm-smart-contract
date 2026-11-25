@@ -1,0 +1,10 @@
+SetBreaker_Concrete_Test
+├── when the caller is not the admin
+│   └── it should revert
+└── when the caller is the admin
+    ├── when the window is under 60 seconds or over 1 day
+    │   └── it should revert
+    └── when the window is 60 seconds to 1 day
+        ├── it should store the limit and the window
+        ├── it should leave the counters, the window start and a trip alone
+        └── it should emit {CircuitBreakerUpdated}
