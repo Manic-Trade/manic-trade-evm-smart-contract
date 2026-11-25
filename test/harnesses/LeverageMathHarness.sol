@@ -76,4 +76,31 @@ contract LeverageMathHarness {
     function capLine(int64 entry, Side side, uint16 leverage, uint16 capBps) external pure returns (int64) {
         return LeverageMath.capLine(entry, side, leverage, capBps);
     }
+
+    function gBps(
+        int64 entry,
+        int64 price,
+        Side side,
+        uint16 leverage,
+        uint16 floorBps,
+        uint16 capBps
+    )
+        external
+        pure
+        returns (uint16)
+    {
+        return LeverageMath.gBps(entry, price, side, leverage, floorBps, capBps);
+    }
+
+    function payout(uint64 stake, uint16 multipleBps) external pure returns (uint64) {
+        return LeverageMath.payout(stake, multipleBps);
+    }
+
+    function maxProfit(uint64 stake, uint16 capBps) external pure returns (uint64) {
+        return LeverageMath.maxProfit(stake, capBps);
+    }
+
+    function touched(int64 price, int64 liqPrice, Side side) external pure returns (bool) {
+        return LeverageMath.touched(price, liqPrice, side);
+    }
 }
