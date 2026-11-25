@@ -140,6 +140,62 @@ contract SettleSplit_LeverageMath_Unit_Test is LeverageMath_Splits_Shared_Test {
     }
 }
 
+/// @notice Two worked examples, end to end.
+contract DesignExamples_LeverageMath_Unit_Test is LeverageMath_Splits_Shared_Test {
+    /// @dev Example 1: a $10 long at $83,884 with a 1.3x floor and the 4x cap, the pool well funded. +$84 pays $20.013
+    ///      less 2% of the $10.013 profit; +$252 pays the $40 cap less 2% of $30; -$8 pays back $9.046, and 3% of the
+    ///      $0.954 loss is the loser fee.
+    function test_Example1_AWellFundedPoolPaysWinnersMinusTwoPercent() public view {
+        SettleSplit memory up84 = _settleAt(V.priceAt(84));
+        assertEq(math.toUser(up84), 19_812_740, "$20.013 pays $19.81");
+        assertEq(up84.winnerFee, 200_260);
+
+        SettleSplit memory up252 = _settleAt(V.priceAt(252));
+        assertEq(math.toUser(up252), 39_400_000, "$40 pays $39.40");
+        assertEq(up252.winnerFee, 600_000);
+
+        SettleSplit memory down8 = _settleAt(V.priceAt(-8));
+        assertEq(math.toUser(down8), 9_046_000, "$9.046 back");
+        assertEq(down8.loserFee, 28_620, "3% of the $0.954 loss");
+    }
+
+    /// @dev Example 2: a $20 buffer, below the $500 floor, so no loser fee is taken. Ali, Sara and Ben stake $10 each;
+    ///      Sara is liquidated; Ali and Ben each win $40; later Dan's liquidated $10 repays Ben.
+    function test_Example2_AnIouIsRepaidFromTheNextLosersMoney() public view {
+        (uint64 total, uint64 locked) = (V.usdc(20) + 3 * V.STAKE, 3 * V.STAKE);
+
+        // Sara is liquidated: her stake becomes free money, with no fee below the floor.
+        assertEq(math.loserFee(V.STAKE, total - locked, V.FLOOR), 0);
+        locked -= V.STAKE;
+
+        SettleSplit memory ali = math.settleSplit(V.usdc(40), V.STAKE, total - locked, 0, V.FLOOR);
+        _assertSettle(ali, V.STAKE, V.usdc(30), 0, 600_000, 0);
+        assertEq(math.toUser(ali), 39_400_000, "Ali receives $39.40");
+        (total, locked) = (total - math.outOfPool(ali), locked - V.STAKE);
+
+        SettleSplit memory ben = math.settleSplit(V.usdc(40), V.STAKE, total - locked, 0, V.FLOOR);
+        _assertSettle(ben, V.STAKE, 0, V.usdc(30), 0, 0);
+        assertEq(math.toUser(ben), V.STAKE, "Ben gets his stake back now and is owed $30");
+        (total, locked) = (total - math.outOfPool(ben), locked - V.STAKE);
+        assertEq(total, 0);
+        assertEq(locked, 0);
+
+        // Dan's $10 bet is liquidated, still below the floor: no fee, and it all becomes free money.
+        (total, locked) = (total + V.STAKE, locked + V.STAKE);
+        assertEq(math.loserFee(V.STAKE, total - locked, V.FLOOR), 0);
+        locked -= V.STAKE;
+
+        // Repay sends it to Ben minus 2%: Ben receives $9.80 and is still owed $20.
+        RepaySplit memory repay = math.repaySplit(ben.owed, total - locked);
+        _assertRepay(repay, V.STAKE, 200_000, 9_800_000, V.usdc(20));
+    }
+
+    function _settleAt(int64 price) internal view returns (SettleSplit memory) {
+        uint16 g = math.gBps(V.P0, price, Side.Call, V.L1000, 13_000, V.CAP_4X);
+        return math.settleSplit(math.payout(V.STAKE, g), V.STAKE, V.usdc(10_000), 0, V.FLOOR);
+    }
+}
+
 /// @notice `sellSplit`, `fees` and `outOfPool`: how an early sale splits.
 contract SellSplit_LeverageMath_Unit_Test is LeverageMath_Splits_Shared_Test {
     /// @dev A profitable sale: a $12.50 valuation sold for $12, so the sell fee is $0.50; the winner fee is 2% of the
@@ -193,6 +249,51 @@ contract SellSplit_LeverageMath_Unit_Test is LeverageMath_Splits_Shared_Test {
                     assertTrue(s.winnerFee == 0 || s.loserFee == 0, "one fee, never both");
                     assertEq(s.winnerFee, math.fee(sellAmount > V.STAKE ? sellAmount - V.STAKE : 0, 200));
                 }
+            }
+        }
+    }
+}
+
+/// @notice `repaySplit`: repaying an IOU from free money.
+contract RepaySplit_LeverageMath_Unit_Test is LeverageMath_Splits_Shared_Test {
+    /// @dev A $10 IOU with $40 free: paid in full, $9.80 to the user and 2% ($0.20) as the winner fee.
+    function test_PaidInFullWhenFreeMoneyCoversIt() public view {
+        _assertRepay(math.repaySplit(V.usdc(10), V.usdc(40)), V.usdc(10), 200_000, 9_800_000, 0);
+    }
+
+    /// @dev As in Example 2: Ben is owed $30 and Dan's $10 loss is all the free money.
+    function test_PartlyPaidWhenFreeMoneyIsShort() public view {
+        _assertRepay(math.repaySplit(V.usdc(30), V.usdc(10)), V.usdc(10), 200_000, 9_800_000, V.usdc(20));
+    }
+
+    /// @dev Exactly enough, and nothing at all.
+    function test_ExactlyEnoughAndNothingAtAll() public view {
+        assertEq(math.repaySplit(V.usdc(3), V.usdc(3)).remaining, 0);
+        _assertRepay(math.repaySplit(V.usdc(3), 0), 0, 0, 0, V.usdc(3));
+    }
+
+    /// @dev The fee rounds down: 2% of 49 base units is 0, of 50 is 1.
+    function test_TheFeeRoundsDown() public view {
+        assertEq(math.repaySplit(49, 49).winnerFee, 0);
+        assertEq(math.repaySplit(50, type(uint64).max).winnerFee, 1);
+    }
+
+    /// @dev Nothing owed: nothing moves, whatever is free.
+    function test_NothingOwedMovesNothing() public view {
+        _assertRepay(math.repaySplit(0, V.usdc(1)), 0, 0, 0, 0);
+    }
+
+    /// @dev Over a grid of IOUs and free money, from 0 to the top of `uint64`.
+    function test_EveryRepaymentConservesMoney() public view {
+        uint64[7] memory oweds = [uint64(0), 1, 49, 50, V.usdc(3), V.usdc(30), type(uint64).max];
+        uint64[7] memory frees = [uint64(0), 1, 50, V.usdc(3), V.usdc(10), V.usdc(1000), type(uint64).max];
+        for (uint256 o; o < oweds.length; ++o) {
+            for (uint256 f; f < frees.length; ++f) {
+                RepaySplit memory r = math.repaySplit(oweds[o], frees[f]);
+                assertEq(r.amount + r.remaining, oweds[o], "amount + remaining = owed");
+                assertEq(r.toUser + r.winnerFee, r.amount, "user + fee = amount");
+                assertLe(r.amount, frees[f], "never more than free money");
+                assertEq(r.winnerFee, math.fee(r.amount, 200));
             }
         }
     }

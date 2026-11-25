@@ -511,6 +511,56 @@ library LeverageMath {
         return split.toUser + fees(split);
     }
 
+    /// @notice Repays an IOU of `owed` from free money (never from open stakes), as much as free money allows, with
+    ///         the 2% winner fee on each repayment.
+    /// @param owed What the IOU still owes.
+    /// @param free The pool's free money.
+    /// @return split The split. See `RepaySplit`.
+    function repaySplit(uint64 owed, uint64 free) internal pure returns (RepaySplit memory split) {
+        split.amount = owed < free ? owed : free;
+        split.winnerFee = winnerFee(split.amount);
+        split.toUser = split.amount - split.winnerFee;
+        split.remaining = owed - split.amount;
+    }
+
+    /// @notice Checks an admin withdrawal from the pool.
+    /// @dev The checks run in this order: a positive amount; nobody owed; free money staying at or above the floor,
+    ///      which also rejects an amount above free money; what is left above the floor still covering every open
+    ///      position's max profit, so a withdrawal never leaves open bets unpayable (docs/ARCHITECTURE.md §8.1);
+    ///      and, for seed recovery, at most 500 whole tokens in total.
+    /// @param purpose Seed recovery (capped) or rewards (not capped).
+    /// @param amount The amount to withdraw (`InvalidAmount` if 0).
+    /// @param free The pool's free money (`total - lockedMargin`), so open stakes can never be withdrawn.
+    /// @param totalOwed The pool's total owed (`OwedOutstanding`).
+    /// @param poolFloor The pool's floor (`BelowPoolFloor`).
+    /// @param openMaxProfit The sum of the open positions' max profit (`OpenExposureNotCovered`).
+    /// @param seedRecovered The seed recovered so far (`SeedRecoveryExceeded`).
+    /// @param decimals The token's decimals, which scale the 500-token cap (`MathOverflow` if it can't fit).
+    function checkWithdraw(
+        WithdrawPurpose purpose,
+        uint64 amount,
+        uint64 free,
+        uint64 totalOwed,
+        uint64 poolFloor,
+        uint64 openMaxProfit,
+        uint64 seedRecovered,
+        uint8 decimals
+    )
+        internal
+        pure
+    {
+        if (amount == 0) revert IManicFlashOptionErrors.InvalidAmount();
+        if (totalOwed != 0) revert IManicFlashOptionErrors.OwedOutstanding();
+        if (uint256(free) < uint256(amount) + poolFloor) revert IManicFlashOptionErrors.BelowPoolFloor();
+        if (uint256(free) - amount - poolFloor < openMaxProfit) {
+            revert IManicFlashOptionErrors.OpenExposureNotCovered();
+        }
+        if (purpose == WithdrawPurpose.SeedRecovery) {
+            uint64 cap = wholeTokens(SEED_RECOVERY_CAP_TOKENS, decimals);
+            if (uint256(seedRecovered) + amount > cap) revert IManicFlashOptionErrors.SeedRecoveryExceeded();
+        }
+    }
+
     /// @dev `tokens` whole tokens in base units (`tokens × 10^decimals`), reverting `MathOverflow` when `10^decimals`
     ///      or the product doesn't fit `uint64`. `10^20` already exceeds `uint64`, so larger decimals stop early,
     ///      before `10**decimals` could overflow even 256 bits.

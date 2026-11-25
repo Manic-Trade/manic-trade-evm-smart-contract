@@ -250,4 +250,33 @@ contract LeverageMathHarness {
     function outOfPool(SellSplit memory split) external pure returns (uint64) {
         return LeverageMath.outOfPool(split);
     }
+
+    function repaySplit(uint64 owed, uint64 free) external pure returns (RepaySplit memory) {
+        return LeverageMath.repaySplit(owed, free);
+    }
+
+    function checkWithdraw(
+        WithdrawPurpose purpose,
+        uint64 amount,
+        uint64 free,
+        uint64 totalOwed,
+        uint64 poolFloor,
+        uint64 openMaxProfit,
+        uint64 seedRecovered,
+        uint8 decimals
+    )
+        external
+        pure
+    {
+        LeverageMath.checkWithdraw({
+            purpose: purpose,
+            amount: amount,
+            free: free,
+            totalOwed: totalOwed,
+            poolFloor: poolFloor,
+            openMaxProfit: openMaxProfit,
+            seedRecovered: seedRecovered,
+            decimals: decimals
+        });
+    }
 }
