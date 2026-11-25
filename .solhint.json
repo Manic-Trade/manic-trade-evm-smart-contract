@@ -1,0 +1,108 @@
+{
+  "extends": "solhint:recommended",
+  "rules": {
+    "compiler-version": [
+      "error",
+      "0.8.38"
+    ],
+    "func-visibility": [
+      "error",
+      {
+        "ignoreConstructors": true
+      }
+    ],
+    "state-visibility": "error",
+    "explicit-types": [
+      "error",
+      "explicit"
+    ],
+    "no-global-import": "error",
+    "no-unused-import": "error",
+    "no-unused-vars": "error",
+    "no-unused-private-funcs": "error",
+    "duplicated-imports": "error",
+    "imports-on-top": "error",
+    "imports-order": "off",
+    "one-contract-per-file": "error",
+    "ordering": "error",
+    "visibility-modifier-order": "error",
+    "interface-starts-with-i": "error",
+    "contract-name-capwords": "error",
+    "event-name-capwords": "error",
+    "func-name-mixedcase": "error",
+    "func-param-name-mixedcase": "error",
+    "modifier-name-mixedcase": "error",
+    "var-name-mixedcase": "error",
+    "const-name-snakecase": "error",
+    "immutable-vars-naming": [
+      "error",
+      {
+        "immutablesAsConstants": true
+      }
+    ],
+    "private-vars-leading-underscore": [
+      "error",
+      {
+        "strict": false
+      }
+    ],
+    "use-forbidden-name": "error",
+    "named-parameters-mapping": "error",
+    "func-named-parameters": [
+      "warn",
+      4
+    ],
+    "comprehensive-interface": "error",
+    "use-natspec": [
+      "error",
+      {
+        "title": {
+          "enabled": true
+        },
+        "author": {
+          "enabled": true
+        },
+        "notice": {
+          "enabled": true
+        },
+        "param": {
+          "enabled": true
+        },
+        "return": {
+          "enabled": true
+        }
+      }
+    ],
+    "gas-custom-errors": "error",
+    "reason-string": "off",
+    "no-inline-assembly": "error",
+    "avoid-low-level-calls": "error",
+    "avoid-tx-origin": "error",
+    "not-rely-on-time": "off",
+    "no-empty-blocks": "off",
+    "max-states-count": "off",
+    "max-line-length": [
+      "error",
+      120
+    ],
+    "quotes": [
+      "error",
+      "double"
+    ],
+    "code-complexity": [
+      "warn",
+      10
+    ],
+    "function-max-lines": [
+      "warn",
+      80
+    ],
+    "no-console": "error",
+    "gas-struct-packing": "off",
+    "gas-indexed-events": "off",
+    "gas-small-strings": "off",
+    "gas-strict-inequalities": "off",
+    "gas-increment-by-one": "off",
+    "import-path-check": "off"
+  }
+}
