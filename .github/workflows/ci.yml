@@ -58,6 +58,11 @@ jobs:
       - name: Check the ABI reference is current
         run: python3 docs/tools/abi_tables.py | diff - docs/abi-reference.md
 
+      # The model's vectors (test/fixtures/model/) must be what model/flash_option_math.py gives now: a change to the
+      # maths changes the model first, then regenerates the vectors (model/README.md). The runner's Python is enough.
+      - name: Check the model's vectors are current
+        run: python3 model/generate_vectors.py --check
+
       - name: Run tests
         run: forge test -vvv
 
