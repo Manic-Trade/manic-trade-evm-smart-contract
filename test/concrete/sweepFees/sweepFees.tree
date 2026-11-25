@@ -1,0 +1,10 @@
+SweepFees_Concrete_Test
+├── when no fees are pending
+│   └── it should revert
+└── when fees are pending
+    ├── when the transfer to the fee recipient fails
+    │   └── it should revert
+    └── when the transfer succeeds
+        ├── it should send every pending fee to the fee recipient, whoever calls
+        ├── it should clear the pending fees
+        └── it should emit {FeesSwept}
