@@ -412,6 +412,105 @@ library LeverageMath {
         return split.own + split.paid + split.loserFee;
     }
 
+    /// @notice Checks that a sale's tick falls inside the position's sell window: at least `minDelaySecs` after the
+    ///         start, and more than `cutoffSecs` before the end.
+    /// @dev Written as comparisons that can't overflow: a tick before the start is too early, and an end at or below
+    ///      the cutoff closes the window, so neither subtraction goes below zero.
+    /// @param startTime The position's entry tick time.
+    /// @param endTime The position's expiry time.
+    /// @param publishTime The sale's tick time.
+    /// @param minDelaySecs How long after the start a sale is first allowed.
+    /// @param cutoffSecs How long before the end sales stop (`SellWindowClosed` for every bound).
+    function checkSellWindow(
+        uint256 startTime,
+        uint256 endTime,
+        uint256 publishTime,
+        uint16 minDelaySecs,
+        uint16 cutoffSecs
+    )
+        internal
+        pure
+    {
+        bool tooEarly = publishTime < startTime || publishTime - startTime < minDelaySecs;
+        bool tooLate = endTime <= cutoffSecs || publishTime >= endTime - cutoffSecs;
+        if (tooEarly || tooLate) revert IManicFlashOptionErrors.SellWindowClosed();
+    }
+
+    /// @notice Checks the amounts of an early sale.
+    /// @dev The checks run in this order: the valuation against what the position pays at this price; the sale
+    ///      amount against the valuation; the early-sell fee (`valuation - sellAmount`) against its cap; the user's
+    ///      minimum; and that the pool can pay the sale in full right now: nobody owed, and the valuation within free
+    ///      money plus the position's own stake. A sale is never partly paid.
+    /// @param stake The position's stake.
+    /// @param gNowBps The position's payout multiple at the sale price.
+    /// @param valuation What the backend values the position at (`ValuationAboveCurrentPayout`).
+    /// @param sellAmount What the user gets before the winner fee (`SellAmountExceedsValuation`, `SellFeeTooHigh`).
+    /// @param minAmount The least the user signed for (`SellAmountBelowMin`).
+    /// @param maxSellFeeBps The market's early-sell fee cap, in bps of the valuation.
+    /// @param totalOwed The pool's total owed (`QueueNotEmpty`).
+    /// @param freeBefore The pool's free money with this position's stake still held (`SellNotPayable`).
+    function checkSell(
+        uint64 stake,
+        uint16 gNowBps,
+        uint64 valuation,
+        uint64 sellAmount,
+        uint64 minAmount,
+        uint16 maxSellFeeBps,
+        uint64 totalOwed,
+        uint64 freeBefore
+    )
+        internal
+        pure
+    {
+        if (valuation > payout(stake, gNowBps)) revert IManicFlashOptionErrors.ValuationAboveCurrentPayout();
+        if (sellAmount > valuation) revert IManicFlashOptionErrors.SellAmountExceedsValuation();
+        if (valuation - sellAmount > fee(valuation, maxSellFeeBps)) revert IManicFlashOptionErrors.SellFeeTooHigh();
+        if (sellAmount < minAmount) revert IManicFlashOptionErrors.SellAmountBelowMin();
+        if (totalOwed != 0) revert IManicFlashOptionErrors.QueueNotEmpty();
+        if (uint256(valuation) > uint256(freeBefore) + stake) revert IManicFlashOptionErrors.SellNotPayable();
+    }
+
+    /// @notice Splits a sale that `checkSell` accepted.
+    /// @dev The winner fee is 2% of the profit the user takes (`sellAmount - stake`, if positive). The loser fee is 3%
+    ///      of the loss in the valuation (`stake - valuation`, if positive), measured against the floor with
+    ///      `freeBefore`, as at settle. Requires `sellAmount <= valuation`, which `checkSell` guarantees.
+    /// @param stake The position's stake.
+    /// @param valuation The accepted valuation.
+    /// @param sellAmount The accepted sale amount.
+    /// @param freeBefore The pool's free money with this position's stake still held.
+    /// @param poolFloor The pool's floor, for the loser fee.
+    /// @return split The split. See `SellSplit`.
+    function sellSplit(
+        uint64 stake,
+        uint64 valuation,
+        uint64 sellAmount,
+        uint64 freeBefore,
+        uint64 poolFloor
+    )
+        internal
+        pure
+        returns (SellSplit memory split)
+    {
+        split.winnerFee = winnerFee(sellAmount > stake ? sellAmount - stake : 0);
+        split.toUser = sellAmount - split.winnerFee;
+        split.sellFee = valuation - sellAmount;
+        split.loserFee = loserFee(stake > valuation ? stake - valuation : 0, freeBefore, poolFloor);
+    }
+
+    /// @notice What goes to the fee recipient on a sale: the early-sell fee and the winner or loser fee.
+    /// @param split A sell split.
+    /// @return The total fees.
+    function fees(SellSplit memory split) internal pure returns (uint64) {
+        return split.sellFee + split.winnerFee + split.loserFee;
+    }
+
+    /// @notice What leaves the pool's books on a sale: `toUser + fees`, which equals the valuation plus the loser fee.
+    /// @param split A sell split.
+    /// @return The amount that leaves the pool's `total`.
+    function outOfPool(SellSplit memory split) internal pure returns (uint64) {
+        return split.toUser + fees(split);
+    }
+
     /// @dev `tokens` whole tokens in base units (`tokens × 10^decimals`), reverting `MathOverflow` when `10^decimals`
     ///      or the product doesn't fit `uint64`. `10^20` already exceeds `uint64`, so larger decimals stop early,
     ///      before `10**decimals` could overflow even 256 bits.
