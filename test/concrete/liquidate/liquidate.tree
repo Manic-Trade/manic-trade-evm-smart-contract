@@ -1,0 +1,40 @@
+Liquidate_Concrete_Test
+├── when the caller is not a settler
+│   └── it should revert
+└── when the caller is a settler
+    ├── given the contract is halted
+    │   └── it should revert
+    └── given the contract is not halted
+        ├── when the batch is empty or holds more than 100 ids
+        │   └── it should revert
+        └── when the batch holds 1 to 100 ids
+            ├── when the market does not exist
+            │   └── it should revert
+            └── when the market exists
+                ├── when an id was never opened
+                │   └── it should revert
+                └── when every id was opened
+                    ├── when a position belongs to another market
+                    │   └── it should revert
+                    └── when every position belongs to the market
+                        ├── given a position has already ended
+                        │   ├── it should skip it
+                        │   └── it should liquidate the others
+                        └── given every position is open
+                            ├── when the price is not positive
+                            │   └── it should revert
+                            └── when the price is positive
+                                ├── when the tick is outside a position's life
+                                │   └── it should revert
+                                └── when the tick is inside every position's life
+                                    ├── when the tick is from the future
+                                    │   └── it should revert
+                                    └── when the tick is not from the future
+                                        ├── when the price does not touch a position's line
+                                        │   └── it should revert
+                                        └── when the price touches every position's line
+                                            ├── it should close each position
+                                            ├── it should keep each stake as free money, less the loser fee
+                                            ├── it should accrue the fees once
+                                            ├── it should emit {PositionLiquidated} for each
+                                            └── it should return the number liquidated
