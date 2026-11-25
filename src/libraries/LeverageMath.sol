@@ -247,6 +247,97 @@ library LeverageMath {
         return side == Side.Call ? price <= liqPrice : price >= liqPrice;
     }
 
+    /// @notice Checks that a price tick liquidates a position.
+    /// @dev The checks run in this order: a positive price; the tick inside the position's life, both ends included;
+    ///      the tick no further ahead of the chain's clock than the skew; and the price touching the line (equality
+    ///      counts). Old ticks are accepted, so the backend can replay after an outage. The price and the tick time
+    ///      are the same for a whole batch, so their errors carry no id; the two that depend on the position do.
+    ///      The comparisons never add or subtract past zero, so they can't overflow.
+    /// @param positionId The position being liquidated, named in its errors.
+    /// @param startTime The position's entry tick time.
+    /// @param endTime The position's expiry time.
+    /// @param liqPrice The position's liquidation line.
+    /// @param side `Call` (liquidated at or below the line) or `Put` (at or above).
+    /// @param price The tick's price; must be positive (`InvalidPrice`).
+    /// @param publishTime The tick's time: `startTime <= publishTime <= endTime` (`InvalidLiquidationWindow`).
+    /// @param currentTime The chain's clock (`block.timestamp`).
+    /// @param clockSkewSecs How far ahead of the clock a tick may be (`PriceFromFuture`).
+    function checkLiquidation(
+        bytes32 positionId,
+        uint256 startTime,
+        uint256 endTime,
+        int64 liqPrice,
+        Side side,
+        int64 price,
+        uint256 publishTime,
+        uint256 currentTime,
+        uint8 clockSkewSecs
+    )
+        internal
+        pure
+    {
+        if (price <= 0) revert IManicFlashOptionErrors.InvalidPrice();
+        if (publishTime < startTime || publishTime > endTime) {
+            revert IManicFlashOptionErrors.InvalidLiquidationWindow(positionId);
+        }
+        if (isFromTheFuture(publishTime, currentTime, clockSkewSecs)) revert IManicFlashOptionErrors.PriceFromFuture();
+        if (!touched(price, liqPrice, side)) revert IManicFlashOptionErrors.LiquidationPriceNotReached(positionId);
+    }
+
+    /// @notice Checks the time of the price tick an open or a sale uses.
+    /// @dev The checks run in this order: a tick time at all (0 is `PriceTooOld`); no further ahead of the clock than
+    ///      the skew; no older than the maximum age. A tick a little ahead of the clock counts as age 0.
+    /// @param currentTime The chain's clock (`block.timestamp`), used only as a sanity bound.
+    /// @param publishTime The tick's time.
+    /// @param maxAgeSecs The oldest a tick may be, in seconds (`PriceTooOld`).
+    /// @param clockSkewSecs How far ahead of the clock a tick may be (`PriceFromFuture`).
+    function checkEntryTime(
+        uint256 currentTime,
+        uint256 publishTime,
+        uint8 maxAgeSecs,
+        uint8 clockSkewSecs
+    )
+        internal
+        pure
+    {
+        if (publishTime == 0) revert IManicFlashOptionErrors.PriceTooOld();
+        if (isFromTheFuture(publishTime, currentTime, clockSkewSecs)) revert IManicFlashOptionErrors.PriceFromFuture();
+        if (currentTime > publishTime && currentTime - publishTime > maxAgeSecs) {
+            revert IManicFlashOptionErrors.PriceTooOld();
+        }
+    }
+
+    /// @notice The open gate.
+    /// @dev A new position is rejected while the total owed exceeds `maxTotalOwed`, and, when `maxExposureBps > 0`,
+    ///      when the open positions' max profit plus this one's would exceed `free × maxExposureBps / 10_000`. The
+    ///      limit rounds down, so the gate errs on the pool's side. At launch `maxExposureBps` is 10_000: the open
+    ///      max profit can never exceed free money, so every winner can be paid in full. 0 turns the gate off here,
+    ///      but `ConfigLib.validate` keeps a market's value at 1 to 10_000 (ADR 0009).
+    /// @param totalOwed The pool's total owed to winners.
+    /// @param maxTotalOwed The market's limit on it (`OpenBlockedTotalOwed`).
+    /// @param openMaxProfit The sum of the open positions' max profit.
+    /// @param newMaxProfit The new position's max profit.
+    /// @param free The pool's free money (`total - lockedMargin`).
+    /// @param maxExposureBps The exposure limit in bps of free money; 0 turns it off (`OpenBlockedExposure`).
+    function openGate(
+        uint64 totalOwed,
+        uint64 maxTotalOwed,
+        uint64 openMaxProfit,
+        uint64 newMaxProfit,
+        uint64 free,
+        uint32 maxExposureBps
+    )
+        internal
+        pure
+    {
+        if (totalOwed > maxTotalOwed) revert IManicFlashOptionErrors.OpenBlockedTotalOwed();
+        if (maxExposureBps > 0) {
+            uint256 exposure = uint256(openMaxProfit) + newMaxProfit;
+            uint256 limit = (uint256(free) * maxExposureBps) / BPS; // rounds down: pool favoured
+            if (exposure > limit) revert IManicFlashOptionErrors.OpenBlockedExposure();
+        }
+    }
+
     /// @dev `tokens` whole tokens in base units (`tokens × 10^decimals`), reverting `MathOverflow` when `10^decimals`
     ///      or the product doesn't fit `uint64`. `10^20` already exceeds `uint64`, so larger decimals stop early,
     ///      before `10**decimals` could overflow even 256 bits.

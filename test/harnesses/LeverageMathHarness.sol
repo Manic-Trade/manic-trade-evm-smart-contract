@@ -103,4 +103,57 @@ contract LeverageMathHarness {
     function touched(int64 price, int64 liqPrice, Side side) external pure returns (bool) {
         return LeverageMath.touched(price, liqPrice, side);
     }
+
+    function checkLiquidation(
+        bytes32 positionId,
+        uint256 startTime,
+        uint256 endTime,
+        int64 liqPrice,
+        Side side,
+        int64 price,
+        uint256 publishTime,
+        uint256 currentTime,
+        uint8 clockSkewSecs
+    )
+        external
+        pure
+    {
+        LeverageMath.checkLiquidation({
+            positionId: positionId,
+            startTime: startTime,
+            endTime: endTime,
+            liqPrice: liqPrice,
+            side: side,
+            price: price,
+            publishTime: publishTime,
+            currentTime: currentTime,
+            clockSkewSecs: clockSkewSecs
+        });
+    }
+
+    function checkEntryTime(
+        uint256 currentTime,
+        uint256 publishTime,
+        uint8 maxAgeSecs,
+        uint8 clockSkewSecs
+    )
+        external
+        pure
+    {
+        LeverageMath.checkEntryTime(currentTime, publishTime, maxAgeSecs, clockSkewSecs);
+    }
+
+    function openGate(
+        uint64 totalOwed,
+        uint64 maxTotalOwed,
+        uint64 openMaxProfit,
+        uint64 newMaxProfit,
+        uint64 free,
+        uint32 maxExposureBps
+    )
+        external
+        pure
+    {
+        LeverageMath.openGate(totalOwed, maxTotalOwed, openMaxProfit, newMaxProfit, free, maxExposureBps);
+    }
 }
