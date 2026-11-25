@@ -1,0 +1,50 @@
+Open_Concrete_Test
+├── when the caller is not an opener
+│   └── it should revert
+└── when the caller is an opener
+    ├── given the contract is halted
+    │   └── it should revert
+    └── given the contract is not halted
+        ├── when the order has expired
+        │   └── it should revert
+        └── when the order has not expired
+            ├── when the market does not exist
+            │   └── it should revert
+            └── when the market exists
+                ├── given the market is disabled
+                │   └── it should revert
+                └── given the market is enabled
+                    ├── given the market is paused
+                    │   └── it should revert
+                    └── given the market is not paused
+                        ├── given the breaker has tripped
+                        │   └── it should revert
+                        └── given the breaker has not tripped
+                            ├── when the position id is zero or used
+                            │   └── it should revert
+                            └── when the position id is new
+                                ├── when the signature is not the user's
+                                │   └── it should revert
+                                └── when the signature is the user's
+                                    ├── when the terms are outside the market's bounds
+                                    │   └── it should revert
+                                    └── when the terms are inside the market's bounds
+                                        ├── when the entry tick is too old or from the future
+                                        │   └── it should revert
+                                        └── when the entry tick is fresh
+                                            ├── when the entry tick is before the order
+                                            │   └── it should revert
+                                            └── when the entry tick is at or after the order
+                                                ├── when the entry price is not positive
+                                                │   └── it should revert
+                                                └── when the entry price is positive
+                                                    ├── when the open gate blocks the bet
+                                                    │   └── it should revert
+                                                    └── when the open gate lets it in
+                                                        ├── when the stake does not arrive in full
+                                                        │   └── it should revert
+                                                        └── when the stake arrives in full
+                                                            ├── it should record the position
+                                                            ├── it should hold the stake and its max profit in the books
+                                                            ├── it should take exactly the stake from the user
+                                                            └── it should emit {PositionOpened}
