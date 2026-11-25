@@ -1,0 +1,68 @@
+# The gas benchmarks (docs/gas.md).
+#
+# `forge test --match-path "test/gas/*"` measures every call the backend makes and writes the numbers into
+# snapshots/. This job fails when:
+# - a fresh run doesn't match the committed snapshots, so every gas change shows in the pull request's diff;
+# - docs/gas.md's tables don't match the snapshots;
+# - on a pull request, a call is more than 5% dearer than on the base branch, or a benchmark is gone. A deliberate
+#   rise passes once the pull request carries the label gas-regression-accepted, which is why this job also runs
+#   when a label is added or removed. It is a workflow of its own, so a label doesn't re-run the whole of CI.
+name: Gas
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+  push:
+    branches: [dev, main]
+
+concurrency:
+  group: gas-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  FOUNDRY_VERSION: v1.8.7
+
+jobs:
+  gas:
+    name: Gas benchmarks (5% check)
+    runs-on: ubuntu-latest
+    steps:
+      # The whole history, so the base commit's snapshots are there to compare with.
+      - name: Check out the code, its history and the pinned library submodules
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+          fetch-depth: 0
+
+      - name: Install Foundry ${{ env.FOUNDRY_VERSION }}
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: ${{ env.FOUNDRY_VERSION }}
+
+      - name: Run the gas benchmarks
+        run: forge test --match-path "test/gas/*"
+
+      - name: Check the committed snapshots match the fresh run
+        run: |
+          if [ -n "$(git status --porcelain -- snapshots/)" ]; then
+            git status --short -- snapshots/
+            git diff -- snapshots/
+            echo "::error::snapshots/ is out of date: run forge test --match-path \"test/gas/*\" and commit snapshots/."
+            exit 1
+          fi
+
+      - name: Check docs/gas.md's tables match the snapshots
+        run: python3 test/gas/check.py --docs
+
+      # The base is the base branch's tip the pull request merges into.
+      - name: Check no call is more than 5% dearer than on the base branch
+        if: github.event_name == 'pull_request'
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+          ACCEPTED: ${{ contains(github.event.pull_request.labels.*.name, 'gas-regression-accepted') }}
+        run: |
+          if [ "$ACCEPTED" = "true" ]; then
+            python3 test/gas/check.py --base "$BASE" --allow-regression
+          else
+            python3 test/gas/check.py --base "$BASE"
+          fi
