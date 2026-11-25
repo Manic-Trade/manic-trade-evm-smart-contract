@@ -190,4 +190,64 @@ contract LeverageMathHarness {
     function outOfPool(SettleSplit memory split) external pure returns (uint64) {
         return LeverageMath.outOfPool(split);
     }
+
+    function checkSellWindow(
+        uint256 startTime,
+        uint256 endTime,
+        uint256 publishTime,
+        uint16 minDelaySecs,
+        uint16 cutoffSecs
+    )
+        external
+        pure
+    {
+        LeverageMath.checkSellWindow(startTime, endTime, publishTime, minDelaySecs, cutoffSecs);
+    }
+
+    function checkSell(
+        uint64 stake,
+        uint16 gNowBps,
+        uint64 valuation,
+        uint64 sellAmount,
+        uint64 minAmount,
+        uint16 maxSellFeeBps,
+        uint64 totalOwed,
+        uint64 freeBefore
+    )
+        external
+        pure
+    {
+        LeverageMath.checkSell({
+            stake: stake,
+            gNowBps: gNowBps,
+            valuation: valuation,
+            sellAmount: sellAmount,
+            minAmount: minAmount,
+            maxSellFeeBps: maxSellFeeBps,
+            totalOwed: totalOwed,
+            freeBefore: freeBefore
+        });
+    }
+
+    function sellSplit(
+        uint64 stake,
+        uint64 valuation,
+        uint64 sellAmount,
+        uint64 freeBefore,
+        uint64 poolFloor
+    )
+        external
+        pure
+        returns (SellSplit memory)
+    {
+        return LeverageMath.sellSplit(stake, valuation, sellAmount, freeBefore, poolFloor);
+    }
+
+    function fees(SellSplit memory split) external pure returns (uint64) {
+        return LeverageMath.fees(split);
+    }
+
+    function outOfPool(SellSplit memory split) external pure returns (uint64) {
+        return LeverageMath.outOfPool(split);
+    }
 }

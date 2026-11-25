@@ -129,6 +129,43 @@ contract CheckLiquidation_LeverageMath_Unit_Test is LeverageMath_Unit_Shared_Tes
     }
 }
 
+/// @notice `checkSellWindow`: a sale is allowed from `start + minDelay` until more than `cutoff` before the end.
+contract CheckSellWindow_LeverageMath_Unit_Test is LeverageMath_Unit_Shared_Test {
+    // A one-minute position, from 1000 to 1060.
+    uint256 internal constant START = 1000;
+    uint256 internal constant END = 1060;
+
+    /// @dev The launch values: no minimum delay, closed in the last 2 seconds.
+    function test_TheLaunchWindowOpensAtTheStartAndClosesTwoSecondsBeforeTheEnd() public {
+        math.checkSellWindow(START, END, START, 0, 2); // the first second
+        math.checkSellWindow(START, END, END - 3, 0, 2); // the last second: 3 s left, more than 2
+        _expectClosed(START - 1, 0, 2); // before the position started
+        _expectClosed(END - 2, 0, 2); // exactly 2 s left
+        _expectClosed(END, 0, 2);
+    }
+
+    function test_AMinimumDelayHoldsTheWindowShut() public {
+        _expectClosed(START + 9, 10, 2);
+        math.checkSellWindow(START, END, START + 10, 10, 2);
+    }
+
+    /// @dev A window that can't open: the delay reaches the cutoff.
+    function test_RevertWhen_TheDelayReachesTheCutoff() public {
+        _expectClosed(START + 58, 58, 2);
+    }
+
+    /// @dev A cutoff longer than the whole timeline closes the window instead of underflowing `end - cutoff`.
+    function test_RevertWhen_TheCutoffIsLongerThanTheTimeline() public {
+        vm.expectRevert(E.SellWindowClosed.selector);
+        math.checkSellWindow(0, 10, 5, 0, 20);
+    }
+
+    function _expectClosed(uint256 publishTime, uint16 minDelay, uint16 cutoff) internal {
+        vm.expectRevert(E.SellWindowClosed.selector);
+        math.checkSellWindow(START, END, publishTime, minDelay, cutoff);
+    }
+}
+
 /// @notice `openGate`: the total-owed limit and the exposure limit.
 contract OpenGate_LeverageMath_Unit_Test is LeverageMath_Unit_Shared_Test {
     /// @dev With no owed limit and the exposure limit off (0), anything passes.
@@ -176,5 +213,67 @@ contract OpenGate_LeverageMath_Unit_Test is LeverageMath_Unit_Shared_Test {
         math.openGate(0, type(uint64).max, V.usdc(970), V.usdc(30), free, 10_000);
         vm.expectRevert(E.OpenBlockedExposure.selector);
         math.openGate(0, type(uint64).max, V.usdc(970), V.usdc(30) + 1, free, 10_000);
+    }
+}
+
+/// @notice `checkSell`: an early sale's amounts, checked in order.
+contract CheckSell_LeverageMath_Unit_Test is LeverageMath_Unit_Shared_Test {
+    uint64 internal constant FREE = 1_000_000_000; // $1,000
+
+    /// @dev $10 at g = 1.3x can be valued up to $13; the fee cap is 6%.
+    function test_EveryBoundAtItsEdgePasses() public view {
+        _sell(V.usdc(13), V.usdc(13), V.usdc(13), 0, FREE);
+    }
+
+    function test_RevertWhen_TheValuationIsAboveThePayoutAtThisPrice() public {
+        vm.expectRevert(E.ValuationAboveCurrentPayout.selector);
+        _sell(V.usdc(13) + 1, V.usdc(13), 0, 0, FREE);
+    }
+
+    function test_RevertWhen_TheSaleAmountIsAboveTheValuation() public {
+        vm.expectRevert(E.SellAmountExceedsValuation.selector);
+        _sell(V.usdc(12), V.usdc(12) + 1, 0, 0, FREE);
+    }
+
+    /// @dev The fee cap: 6% of $12.50 is $0.75, so a sale for $11.75 passes and one base unit less doesn't.
+    function test_TheSellFeeCapIsInclusive() public {
+        _sell(12_500_000, 11_750_000, 0, 0, FREE);
+        vm.expectRevert(E.SellFeeTooHigh.selector);
+        _sell(12_500_000, 11_750_000 - 1, 0, 0, FREE);
+    }
+
+    function test_RevertWhen_TheSaleAmountIsBelowTheUsersMinimum() public {
+        vm.expectRevert(E.SellAmountBelowMin.selector);
+        _sell(V.usdc(12), V.usdc(12), V.usdc(12) + 1, 0, FREE);
+    }
+
+    /// @dev Payable only while nobody is owed.
+    function test_RevertWhen_AnyoneIsOwed() public {
+        vm.expectRevert(E.QueueNotEmpty.selector);
+        _sell(V.usdc(12), V.usdc(12), 0, 1, FREE);
+    }
+
+    /// @dev Payable only within free money plus the position's own stake: $12 fits $2 free + $10 stake.
+    function test_ThePoolMustPayTheSaleInFull() public {
+        _sell(V.usdc(12), V.usdc(12), 0, 0, V.usdc(2));
+        vm.expectRevert(E.SellNotPayable.selector);
+        _sell(V.usdc(12), V.usdc(12), 0, 0, V.usdc(2) - 1);
+    }
+
+    /// @dev The order: the valuation bound comes before payability.
+    function test_TheValuationIsCheckedBeforePayability() public {
+        vm.expectRevert(E.ValuationAboveCurrentPayout.selector);
+        _sell(V.usdc(13) + 1, V.usdc(13), 0, 1, 0);
+    }
+
+    /// @dev A zero fee cap allows only sales at the full valuation.
+    function test_AZeroFeeCapAllowsOnlyTheFullValuation() public {
+        math.checkSell(V.STAKE, 13_000, V.usdc(12), V.usdc(12), 0, 0, 0, FREE);
+        vm.expectRevert(E.SellFeeTooHigh.selector);
+        math.checkSell(V.STAKE, 13_000, V.usdc(12), V.usdc(12) - 1, 0, 0, 0, FREE);
+    }
+
+    function _sell(uint64 valuation, uint64 sellAmount, uint64 minAmount, uint64 totalOwed, uint64 free) internal view {
+        math.checkSell(V.STAKE, 13_000, valuation, sellAmount, minAmount, 600, totalOwed, free);
     }
 }

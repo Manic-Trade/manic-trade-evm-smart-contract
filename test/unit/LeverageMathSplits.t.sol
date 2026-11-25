@@ -139,3 +139,61 @@ contract SettleSplit_LeverageMath_Unit_Test is LeverageMath_Splits_Shared_Test {
         }
     }
 }
+
+/// @notice `sellSplit`, `fees` and `outOfPool`: how an early sale splits.
+contract SellSplit_LeverageMath_Unit_Test is LeverageMath_Splits_Shared_Test {
+    /// @dev A profitable sale: a $12.50 valuation sold for $12, so the sell fee is $0.50; the winner fee is 2% of the
+    ///      $2 profit ($0.04), and the user gets $11.96.
+    function test_AProfitableSale() public view {
+        SellSplit memory won = math.sellSplit(V.STAKE, 12_500_000, V.usdc(12), V.FLOOR, V.FLOOR);
+        assertEq(won.toUser, 11_960_000);
+        assertEq(won.sellFee, 500_000);
+        assertEq(won.winnerFee, 40_000);
+        assertEq(won.loserFee, 0);
+    }
+
+    /// @dev A losing sale: $9 valuation sold for $8.60; 3% of the $1 loss at the floor, none below it.
+    function test_ALosingSale() public view {
+        SellSplit memory lost = math.sellSplit(V.STAKE, V.usdc(9), 8_600_000, V.FLOOR, V.FLOOR);
+        assertEq(lost.toUser, 8_600_000);
+        assertEq(lost.sellFee, 400_000);
+        assertEq(lost.winnerFee, 0);
+        assertEq(lost.loserFee, 30_000);
+        assertEq(math.sellSplit(V.STAKE, V.usdc(9), 8_600_000, V.FLOOR - 1, V.FLOOR).loserFee, 0);
+    }
+
+    /// @dev The capped region: no sell fee; the winner fee on the $30 profit.
+    function test_ASaleAtTheCap() public view {
+        SellSplit memory capped = math.sellSplit(V.STAKE, V.usdc(40), V.usdc(40), V.FLOOR, V.FLOOR);
+        assertEq(capped.toUser, 39_400_000);
+        assertEq(math.fees(capped), 600_000);
+    }
+
+    /// @dev Sold at the stake: no fee at all. A valuation above the stake with a sale below it pays only the sell fee.
+    function test_SalesAroundTheStake() public view {
+        assertEq(math.fees(math.sellSplit(V.STAKE, V.STAKE, V.STAKE, V.FLOOR, V.FLOOR)), 0);
+        SellSplit memory between = math.sellSplit(V.STAKE, 10_200_000, 9_900_000, V.FLOOR, V.FLOOR);
+        assertEq(between.winnerFee, 0);
+        assertEq(between.loserFee, 0);
+        assertEq(between.sellFee, 300_000);
+    }
+
+    /// @dev Over a grid of valuations, sale amounts and free money: everything a sale moves comes out of the valuation
+    ///      plus the loser fee, and the user's part plus the winner fee is the sale amount.
+    function test_EverySaleConservesMoney() public view {
+        uint64[4] memory frees = [uint64(0), V.FLOOR - 1, V.FLOOR, V.usdc(10_000)];
+        for (uint64 valuation; valuation <= V.usdc(40); valuation += 1_234_567) {
+            uint64[5] memory feeParts = [uint64(0), 1, 99, valuation / 20, valuation];
+            for (uint256 p; p < feeParts.length; ++p) {
+                uint64 sellAmount = valuation - (feeParts[p] < valuation ? feeParts[p] : valuation);
+                for (uint256 f; f < frees.length; ++f) {
+                    SellSplit memory s = math.sellSplit(V.STAKE, valuation, sellAmount, frees[f], V.FLOOR);
+                    assertEq(math.outOfPool(s), valuation + s.loserFee, "out of pool = valuation + loser fee");
+                    assertEq(s.toUser + s.winnerFee, sellAmount, "user + winner fee = sale amount");
+                    assertTrue(s.winnerFee == 0 || s.loserFee == 0, "one fee, never both");
+                    assertEq(s.winnerFee, math.fee(sellAmount > V.STAKE ? sellAmount - V.STAKE : 0, 200));
+                }
+            }
+        }
+    }
+}
