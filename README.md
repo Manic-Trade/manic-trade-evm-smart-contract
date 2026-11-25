@@ -54,9 +54,9 @@ contract behind an ERC-1967 (UUPS) proxy.
   append-only. CI checks every change with OpenZeppelin's upgrades plugin
   ([ADR 0001](docs/adr/0001-uups-proxy-with-erc7201-storage.md)).
 
-The full design is in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md), and the maths in
-[`docs/MATH.md`](docs/MATH.md). The reasons behind the main choices are in [`docs/adr/`](docs/adr/README.md)
-(architecture decision records).
+The full design is in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md), and the maths in [`docs/MATH.md`](docs/MATH.md),
+with a second implementation in Python in [`model/`](model/README.md) that the contract is tested against. The reasons
+behind the main choices are in [`docs/adr/`](docs/adr/README.md) (architecture decision records).
 
 ## Repository map
 
@@ -64,6 +64,7 @@ The full design is in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md), and the ma
 |---|---|
 | [`src/`](src/README.md) | The contract, split into small files by concern (modules, a shared base, libraries, types, interfaces); it compiles to one deployed contract |
 | [`test/`](test/README.md) | The tests, by kind (below) |
+| [`model/`](model/README.md) | The maths again, in Python, written from `docs/MATH.md`, and the generator of the vectors the contract is tested against |
 | [`script/`](script/README.md) | Deploy, configure, upgrade and smoke-test scripts, with their inputs in `script/config/` |
 | [`docs/`](docs/) | The design, the maths and the guides (below) |
 | [`abi/`](abi/README.md) | The contract's ABI for the backend and the frontend, kept current by CI |
@@ -77,6 +78,7 @@ The full design is in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md), and the ma
 | Folder | What it covers |
 |---|---|
 | `unit/` | The libraries (the maths, the settings checks, the order hashes, the breaker), the storage layout and the ABI, without a proxy |
+| `model/` | The maths against the Python model, on 20,661 vectors (`fixtures/model/`): the same outputs, or the same error |
 | `concrete/` | One folder per function: a `.tree` file of its checks in order, and the tests made from it; plus the rules that cross functions (the brakes, the breaker, reentrancy, the views) |
 | `fuzz/` | Properties over random inputs: the maths, signatures, the order rules, rounding, and each function at any leverage |
 | `invariant/` | Random sequences of actions on BTC at 1000x, 500x and 100x on one pool, with every invariant checked after every call |
@@ -146,6 +148,8 @@ The fork tests need an RPC URL (`cp .env.example .env`, then fill it in), and sk
 | Deep fuzzing (100,000 cases per property; CI runs it each week `dev` changed) | `FOUNDRY_PROFILE=deep forge test --match-path 'test/fuzz/*'` |
 | Deep invariant runs (1,000 runs of 100 calls per campaign; CI runs them each week `dev` changed) | `FOUNDRY_PROFILE=deep forge test --match-path 'test/invariant/*'` |
 | Upgrade-safety check: the layout against `dev`, and the 15 variants (needs Node.js 22; CI runs it on every change) | `python3 test/upgrade/layout/check.py --base origin/dev` |
+| The maths model: recompute MATH.md's worked examples | `python3 model/flash_option_math.py` |
+| Check the model's vectors are current (CI runs it on every change) / regenerate them | `python3 model/generate_vectors.py --check` / `python3 model/generate_vectors.py` |
 | Format / check formatting | `forge fmt` / `forge fmt --check` |
 | Coverage | `forge coverage` |
 | Gas snapshot | `forge snapshot` |

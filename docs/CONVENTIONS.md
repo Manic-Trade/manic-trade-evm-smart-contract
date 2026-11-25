@@ -155,8 +155,8 @@ warning as an error.
 ## 9. Tests
 
 - Folders: `unit/` (libraries and test doubles, no proxy), `concrete/<fn>/` (BTT), `fuzz/`, `invariant/`, `access/`,
-  `scenarios/`, `signing/`, `upgrade/`, `fork/`, `gas/`, `script/`; shared code in `Base.t.sol`, `utils/`, `mocks/`,
-  `harnesses/`. Rules that cross functions get their own `concrete/` folder without a tree: `views/`, `reentrancy/`,
+  `scenarios/`, `signing/`, `model/`, `upgrade/`, `fork/`, `gas/`, `script/`; shared code in `Base.t.sol`, `utils/`,
+  `mocks/`, `harnesses/`. Rules that cross functions get their own `concrete/` folder without a tree: `views/`, `reentrancy/`,
   `brakes/`, `breaker/`, `counters/`, `leverages/`.
 - Each state-changing function with ordered checks has `concrete/<fn>/<fn>.tree`.
   - Write the tree first, with the test contract's name as its root (`<Function>_Concrete_Test`).
@@ -200,6 +200,9 @@ warning as an error.
     send it in another (`SettlementHandler`'s `_touchedBatch`, `_dueBatch` and `_sendBatch`).
 - JSON fixtures (`test/fixtures/`): read them with `vm.parseJsonType` and an explicit type string, never `parseJson` +
   `abi.decode`, which orders struct fields alphabetically.
+- The maths has a second implementation, `model/flash_option_math.py`. A change to the maths changes docs/MATH.md and
+  the model first, then regenerates the vectors (`python3 model/generate_vectors.py`), and `test/model/` must pass
+  with them. A vector that changes is a rule that changed, so its diff is reviewed with the code.
 - Gas: `vm.snapshotGasLastFrame("<name>")` in `test/gas/`; every change to `snapshots/` is explained in the PR.
 - Fork tests (`test/fork/`, on `Fork_Base_Test`) fork Robinhood Chain mainnet through `ROBINHOOD_RPC_URL`, and skip
   themselves without it, so `forge test` never needs the network. The public RPC keeps only minutes of state, so they

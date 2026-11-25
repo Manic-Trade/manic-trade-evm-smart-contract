@@ -39,6 +39,32 @@ python3 test/fixtures/eip712_vectors.py   # from the repo root, with Foundry 1.8
 Orders are read with `vm.parseJsonType` and an explicit type string, which keeps the struct's field order
 (docs/CONVENTIONS.md §9).
 
+## `model/`: the model's vectors
+
+What the reference model of the maths gives: `model/flash_option_math.py`, a second implementation of docs/MATH.md in
+Python ([`model/README.md`](../../model/README.md)). One file per function, 24 in all, with 20,661 inputs (2.8 MB).
+
+- **The header:** the function, its library, the section of docs/MATH.md it follows, the generator, the seed, and
+  `caseCount` and `revertCount`.
+- **`cases`:** inputs the function accepts, with the outputs the model gives (a check that passes has none).
+- **`reverts`:** inputs it refuses, with `errorName`: the contract's error, or `Panic(0x11)` / `Panic(0x12)` for
+  Solidity's overflow and division-by-zero panics.
+- **The order:** the edge cases first, each with a `note` (the bounds, zero, one unit past each limit, the rounding
+  boundaries, every refusal and the worked examples of docs/MATH.md §12), then seeded random inputs over the whole
+  input domain, at 1000x, 500x, 100x and any leverage.
+
+**Where it comes from:** `model/generate_vectors.py`. Each file's seed is fixed, so the same model always writes the
+same bytes. To regenerate, or to check that the files are current, as CI does on every pull request and push:
+
+```bash
+python3 model/generate_vectors.py           # from the repo root
+python3 model/generate_vectors.py --check   # exit 1 if a file differs from what the model gives now
+```
+
+**Where it is checked:** `test/model/ModelVectors.t.sol`, one test per function. Through `test/harnesses/`, the
+contract must give the model's outputs exactly, or refuse with the model's error and its arguments. The files are
+read with `vm.parseJsonTypeArray` and an explicit type string, like the EIP-712 vectors.
+
 ## `scripts/`: inputs the deploy scripts must refuse
 
 `chains-bad-enabled.toml` is a chains.toml with two broken tables, which `test/script/Base.t.sol` feeds to the scripts'
