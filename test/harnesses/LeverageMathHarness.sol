@@ -156,4 +156,38 @@ contract LeverageMathHarness {
     {
         LeverageMath.openGate(totalOwed, maxTotalOwed, openMaxProfit, newMaxProfit, free, maxExposureBps);
     }
+
+    function fee(uint64 amount, uint16 feeBps) external pure returns (uint64) {
+        return LeverageMath.fee(amount, feeBps);
+    }
+
+    function winnerFee(uint64 profitPaid) external pure returns (uint64) {
+        return LeverageMath.winnerFee(profitPaid);
+    }
+
+    function loserFee(uint64 loss, uint64 freeBefore, uint64 poolFloor) external pure returns (uint64) {
+        return LeverageMath.loserFee(loss, freeBefore, poolFloor);
+    }
+
+    function settleSplit(
+        uint64 payoutAmount,
+        uint64 stake,
+        uint64 freeBefore,
+        uint64 totalOwed,
+        uint64 poolFloor
+    )
+        external
+        pure
+        returns (SettleSplit memory)
+    {
+        return LeverageMath.settleSplit(payoutAmount, stake, freeBefore, totalOwed, poolFloor);
+    }
+
+    function toUser(SettleSplit memory split) external pure returns (uint64) {
+        return LeverageMath.toUser(split);
+    }
+
+    function outOfPool(SettleSplit memory split) external pure returns (uint64) {
+        return LeverageMath.outOfPool(split);
+    }
 }

@@ -338,6 +338,80 @@ library LeverageMath {
         }
     }
 
+    /// @notice `amount × feeBps / 10_000`.
+    /// @dev Rounds down, so a fee never rounds against the user, and the rate is clamped to 100%, so a fee never
+    ///      exceeds `amount`.
+    /// @param amount The amount the fee is taken from.
+    /// @param feeBps The fee rate in bps (values above 10_000 count as 10_000).
+    /// @return The fee.
+    function fee(uint64 amount, uint16 feeBps) internal pure returns (uint64) {
+        uint256 rate = feeBps < BPS ? feeBps : BPS;
+        return toUint64((uint256(amount) * rate) / BPS); // rounds down: user favoured; at most `amount`
+    }
+
+    /// @notice The 2% winner fee on profit actually paid to the user.
+    /// @dev Taken at settle, on a profitable sale and on each repayment. Profit that is only owed pays no fee until it
+    ///      is repaid.
+    /// @param profitPaid The profit paid out now.
+    /// @return The winner fee.
+    function winnerFee(uint64 profitPaid) internal pure returns (uint64) {
+        return fee(profitPaid, WINNER_FEE_BPS);
+    }
+
+    /// @notice The 3% loser fee on `loss`, taken only while the pool's free money is at or above its floor.
+    /// @dev `freeBefore` is the free money before this order. A queue only forms once free money has run out, and
+    ///      repayments spend new losers' money on it, so the fee is usually skipped while winners are owed.
+    /// @param loss The loss (the whole stake when liquidated).
+    /// @param freeBefore The pool's free money before this order.
+    /// @param poolFloor The pool's floor.
+    /// @return The loser fee, or 0 below the floor.
+    function loserFee(uint64 loss, uint64 freeBefore, uint64 poolFloor) internal pure returns (uint64) {
+        return freeBefore >= poolFloor ? fee(loss, LOSER_FEE_BPS) : 0;
+    }
+
+    /// @notice Splits an expiry payout into the user's own stake, profit paid now, profit owed, and the fees.
+    /// @dev The user's own stake comes back first: all of it on a win, what is left of it on a loss. Anything above
+    ///      the stake is profit, which only free money can pay. While anyone is owed (`totalOwed > 0`), a new
+    ///      winner's whole profit joins the queue, so nobody jumps it.
+    /// @param payoutAmount What the position pays at expiry (`payout(stake, gBps(...))`).
+    /// @param stake The position's stake.
+    /// @param freeBefore The pool's free money with this position's stake still held.
+    /// @param totalOwed The pool's total owed before this settle.
+    /// @param poolFloor The pool's floor, for the loser fee.
+    /// @return split The split. See `SettleSplit`.
+    function settleSplit(
+        uint64 payoutAmount,
+        uint64 stake,
+        uint64 freeBefore,
+        uint64 totalOwed,
+        uint64 poolFloor
+    )
+        internal
+        pure
+        returns (SettleSplit memory split)
+    {
+        split.own = payoutAmount < stake ? payoutAmount : stake;
+        uint64 profit = payoutAmount - split.own;
+        if (totalOwed == 0) split.paid = profit < freeBefore ? profit : freeBefore;
+        split.owed = profit - split.paid;
+        split.winnerFee = winnerFee(split.paid);
+        split.loserFee = loserFee(stake - split.own, freeBefore, poolFloor);
+    }
+
+    /// @notice What the user receives now from a settle: `own + paid - winnerFee`.
+    /// @param split A settle split.
+    /// @return The amount for the user.
+    function toUser(SettleSplit memory split) internal pure returns (uint64) {
+        return split.own + split.paid - split.winnerFee;
+    }
+
+    /// @notice What leaves the pool's books on a settle: the user's part and both fees, `own + paid + loserFee`.
+    /// @param split A settle split.
+    /// @return The amount that leaves the pool's `total`.
+    function outOfPool(SettleSplit memory split) internal pure returns (uint64) {
+        return split.own + split.paid + split.loserFee;
+    }
+
     /// @dev `tokens` whole tokens in base units (`tokens × 10^decimals`), reverting `MathOverflow` when `10^decimals`
     ///      or the product doesn't fit `uint64`. `10^20` already exceeds `uint64`, so larger decimals stop early,
     ///      before `10**decimals` could overflow even 256 bits.
