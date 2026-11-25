@@ -1,0 +1,26 @@
+Initialize_Concrete_Test
+├── when called on the implementation
+│   └── it should revert
+├── given the proxy is already initialized
+│   └── it should revert
+└── given the proxy is not initialized
+    ├── when an address is zero
+    │   └── it should revert
+    └── when every address is set
+        ├── when the token has fewer than 6 or more than 9 decimals
+        │   └── it should revert
+        └── when the token has 6 to 9 decimals
+            ├── when the pool floor is below 500 whole tokens
+            │   └── it should revert
+            └── when the pool floor is at least 500 whole tokens
+                ├── when the refund delay is between 1 second and 1 hour
+                │   └── it should revert
+                └── when the refund delay is 0 or at least 1 hour
+                    ├── when the breaker window is outside 60 to 86400 seconds
+                    │   └── it should revert
+                    └── when the breaker window is 60 to 86400 seconds
+                        ├── it should grant each role to exactly its holders
+                        ├── it should make the default admin every role's admin
+                        ├── it should store every setting
+                        ├── it should set the EIP-712 domain
+                        └── it should emit the setup events in order
