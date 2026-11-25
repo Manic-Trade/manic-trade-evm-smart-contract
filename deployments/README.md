@@ -31,6 +31,8 @@ profile, so it carries the AST and storage layouts:
 - The upgrade checker compares each new version against the build-info of the version it replaces, so that folder is
   kept for every deployed version.
 - Its name must be unique per version (`build-info-v<version>`).
+- Foundry records the build folder's absolute path in it. `script/build_info.py` makes that path relative before the
+  folder is committed, so no local path is published.
 - CI's upgrade-safety job checks the code against every `deployments/*/build-info-v*/` folder it finds, with no change
   to the job ([`test/upgrade/layout/`](../test/upgrade/layout/README.md)).
 - How to make it: [`docs/runbooks/deploy-testnet.md`](../docs/runbooks/deploy-testnet.md), step 6.

@@ -75,8 +75,9 @@ repository yet.
   - gas benchmarks (`snapshots/ManicFlashOption.json`, `docs/gas.md`);
   - the deploy scripts' own tests.
 - **Scripts:** `DeployMockUsdg`, `Deploy`, `Configure`, `Upgrade` and `Smoke`, each checking its result on chain;
-  `smoke.py`, every way a bet ends on a live chain; `bytecode.py`, which checks the deployed code is the build. Inputs
-  in `script/config/`, outputs in `deployments/<chainId>.json`.
+  `smoke.py`, every way a bet ends on a live chain; `bytecode.py`, which checks the deployed code is the build;
+  `build_info.py`, which keeps the build machine's paths out of a committed build-info. Inputs in `script/config/`,
+  outputs in `deployments/<chainId>.json`.
 - **CI:** formatting, the build and its size check, the tests, the committed ABI and ABI reference, the model's
   vectors, the layout check, Slither, coverage (every line, function and reachable branch of `src/`), solhint and
   bulloak, a gas check (no call more than 5% dearer than on the base branch), and weekly deep fuzz, invariant and fork

@@ -89,12 +89,17 @@ IMPL=$(jq -r .implementation deployments/46630.json)
 cast code $IMPL --rpc-url robinhood_testnet > $TMP/deployed.hex
 python3 script/bytecode.py $TMP/deployed.hex $TMP/out/ManicFlashOption.sol/ManicFlashOption.json
 mkdir -p deployments/46630 && cp -R $TMP/out/build-info deployments/46630/build-info-v1.0.0
+python3 script/build_info.py deployments/46630/build-info-v1.0.0       # no local path in what is committed
 python3 test/upgrade/layout/check.py                                   # now also checks against it
 ```
 
 `script/bytecode.py` blanks the immutables before comparing. The deployed code differs from the build only at
 `UUPSUpgradeable.__self`, which holds the implementation's own address. The rest must be equal byte for byte, metadata
 hash included.
+
+Foundry records the build folder's absolute path in the build-info (`input.basePath`, `allowPaths` and
+`includePaths`), which would publish where it was built. `script/build_info.py` rewrites it to `.`. The compiler's
+output is unchanged, so the upgrade check reads it as before.
 
 ## 7. Verify the source on the explorer
 
