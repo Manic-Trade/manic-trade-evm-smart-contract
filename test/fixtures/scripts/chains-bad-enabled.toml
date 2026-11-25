@@ -1,0 +1,44 @@
+# A chains.toml whose anvil table switches on a leverage it doesn't create (7x): the scripts must refuse it.
+# Used by test/script/Base.t.sol.
+[31337]
+name = "anvil, bad"
+deployer = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
+admin = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
+admin_transfer_delay = 3600
+upgrader = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
+operator = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
+guardian = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
+openers = ["0x70997970C51812dc3A010C7d01b50e0d17dc79C8"]
+settlers = ["0x90F79bf6EB2c4f870365E785982E1f101E93b906"]
+token = "0x0000000000000000000000000000000000000000"
+pool_floor = 500_000_000
+fee_recipient = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
+rewards_recipient = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
+refund_delay_secs = 86_400
+breaker_max_net_profit = 1_000_000_000
+breaker_window_secs = 3600
+leverages = [1000]
+enabled = [1000, 7]
+pool_funding = 10_000_000_000
+
+# A value too big for its type: admin_transfer_delay is a uint48.
+[31338]
+name = "anvil, overflow"
+deployer = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
+admin = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
+admin_transfer_delay = 281_474_976_710_656
+upgrader = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
+operator = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
+guardian = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
+openers = ["0x70997970C51812dc3A010C7d01b50e0d17dc79C8"]
+settlers = ["0x90F79bf6EB2c4f870365E785982E1f101E93b906"]
+token = "0x0000000000000000000000000000000000000000"
+pool_floor = 500_000_000
+fee_recipient = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
+rewards_recipient = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
+refund_delay_secs = 86_400
+breaker_max_net_profit = 1_000_000_000
+breaker_window_secs = 3600
+leverages = [1000]
+enabled = [1000]
+pool_funding = 10_000_000_000
