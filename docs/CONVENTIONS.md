@@ -263,7 +263,8 @@ Storage: no change. ABI: no change.
 
 ## 13. Docs
 
-- README: what, addresses, quick start, repo map, security contact.
+- README: what it is, why Robinhood Chain, its status and addresses, the repo map and security. CONTRIBUTING.md:
+  the quick start, the toolchain, the commands and how we work.
 - CHANGELOG.md: per contract version; always lists ABI and storage changes.
 - `docs/adr/NNNN-title.md` (MADR). Write one for every decision that someone could reasonably undo later.
   Never edit an accepted ADR; supersede it.
