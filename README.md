@@ -35,7 +35,7 @@ with USDG's behaviour. The contract, the proxy every call and event uses:
   leverage L, every basis point the price moves is worth L basis points of the stake.
 - **Each position has three limits:**
   - a liquidation line: a price tick that touches it ends the position, and the stake is lost;
-  - a floor: the least a right call pays;
+  - a floor: the least a winning position pays;
   - a cap: the most a position pays.
 - **The platform is never the counterparty.** One pool, funded by the operator, pays winners, and losers' stakes go
   into it. The platform earns fees only and never takes the other side of a trade.
