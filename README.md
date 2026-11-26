@@ -29,19 +29,20 @@ with USDG's behaviour. The contract, the proxy every call and event uses:
 
 ## What it does
 
-- **A bet** says a price will end higher (a call) or lower (a put) after a short duration: 1 to 5 minutes at launch.
+- **A trade** says a price will end higher (Long, a call) or lower (Short, a put) after a short duration: 1 to 5 minutes
+  at launch.
 - **The user chooses the leverage.** Each market is a price feed at one leverage: BTC at 1000x, 500x and 100x. At
   leverage L, every basis point the price moves is worth L basis points of the stake.
-- **Each bet has three limits:**
-  - a liquidation line: a price tick that touches it ends the bet, and the stake is lost;
+- **Each position has three limits:**
+  - a liquidation line: a price tick that touches it ends the position, and the stake is lost;
   - a floor: the least a right call pays;
-  - a cap: the most a bet pays.
+  - a cap: the most a position pays.
 - **The platform is never the counterparty.** One pool, funded by the operator, pays winners, and losers' stakes go
   into it. The platform earns fees only and never takes the other side of a trade.
 - **Commit first, price after.** The user signs an order with no price in it (EIP-712, domain `"Manic Flash Option"`,
   version `"1"`), and a USDG authorisation for exactly the stake. The backend adds the next price tick, sends the
   transaction and pays the gas, so users never need ETH.
-- **A bet ends in one of four ways:** liquidated when a tick touches its line, settled at its expiry second, sold
+- **A position ends in one of four ways:** liquidated when a tick touches its line, settled at its expiry second, sold
   early, or refunded if the backend never settles it.
 - **If the pool can't pay a winner in full,** the rest becomes an IOU, repaid first in, first out.
 
@@ -56,17 +57,18 @@ with USDG's behaviour. The contract, the proxy every call and event uses:
 - **Brakes.** The guardian can halt every market at once, pause one market, or revoke a relayer key at once. Only the
   operator can release a halt or a pause.
 - **A payout circuit breaker.** When the profit paid out in a window beats the losses kept by more than a limit, new
-  bets and sales stop until the operator resets it. Liquidations, settlements, repayments, refunds and claims go on
+  trades and sales stop until the operator resets it. Liquidations, settlements, repayments, refunds and claims go on
   ([ADR 0003](docs/adr/0003-payout-circuit-breaker.md)).
-- **The pool covers every bet.** A bet opens only while free money covers every open bet's maximum profit (the open
-  gate, at most 100% of free money). Withdrawals leave every open bet covered, and stop while anyone is owed.
+- **The pool covers every position.** A trade opens only while free money covers every open position's maximum profit
+  (the open gate, at most 100% of free money). Withdrawals leave every open position covered, and stop while anyone is
+  owed.
 - **Bounded settings.** A market's payout settings, its open gate and its clock skew are checked whenever they are set,
   so not even the operator's key can loosen them past those bounds
   ([ADR 0009](docs/adr/0009-bounded-open-gate-and-clock-skew.md)).
 - **Payouts never block a batch.** A payout the token refuses (a frozen address, a paused token) waits in `claimable`
   for its owner, and the rest of the batch is paid.
-- **The safety refund.** If the backend stops, anyone can return a bet's whole stake once the refund delay (24 hours at
-  launch) has passed since its expiry. No brake stops it.
+- **The safety refund.** If the backend stops, anyone can return a position's whole stake once the refund delay (24
+  hours at launch) has passed since its expiry. No brake stops it.
 - **Upgrade safety.** All state lives in one ERC-7201 namespace, `manic.storage.FlashOption`, and its layout is
   append-only. CI checks every change with OpenZeppelin's upgrades plugin
   ([ADR 0001](docs/adr/0001-uups-proxy-with-erc7201-storage.md)).
