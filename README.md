@@ -39,9 +39,9 @@ with USDG's behaviour. The contract, the proxy every call and event uses:
   - a cap: the most a position pays.
 - **The platform is never the counterparty.** One pool, funded by the operator, pays winners, and losers' stakes go
   into it. The platform earns fees only and never takes the other side of a trade.
-- **Commit first, price after.** The user signs an order with no price in it (EIP-712, domain `"Manic Flash Option"`,
-  version `"1"`), and a USDG authorisation for exactly the stake. The backend adds the next price tick, sends the
-  transaction and pays the gas, so users never need ETH.
+- **Commit first, price after.** The user signs an order with no price in it (EIP-712), and a USDG authorisation for
+  exactly the stake. The backend adds the next price tick, sends the transaction and pays the gas, so users never need
+  ETH.
 - **A position ends in one of four ways:** liquidated when a tick touches its line, settled at its expiry second, sold
   early, or refunded if the backend never settles it.
 - **If the pool can't pay a winner in full,** the rest becomes an IOU, repaid first in, first out.
