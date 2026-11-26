@@ -1,8 +1,15 @@
-# Manic Flash Option
+# Manic Flash Options
 
-`ManicFlashOption` is the Manic Flash Option contract for **Robinhood Chain**: short, leveraged bets on where a price
-goes, staked and paid in USDG from one pool. It is written in Solidity 0.8.38 with Foundry, and runs as one upgradeable
-contract behind an ERC-1967 (UUPS) proxy.
+Manic.trade is the trading app for the next minute: 0DTE-style options on crypto, stocks and oil that expire in 1 to 5
+minutes. Flash Options lets you trade synthetic BTC options like perps: pick Long or Short and a leverage tier up to
+1000x, get paid by how far the price moves, and never lose more than your stake. In Higher/Lower, you pick a direction
+and a duration and see your fixed payout before you trade (Coming Soon).
+
+**Try it:** [options.manic.trade](https://options.manic.trade)
+
+This repository holds the Flash Options contract, `ManicFlashOption`, for **Robinhood Chain**: short, leveraged trades
+on where a price goes, staked and paid in USDG from one pool. It is written in Solidity 0.8.38 with Foundry, and runs as
+one upgradeable contract behind an ERC-1967 (UUPS) proxy.
 
 > **Status:** v1.0.0, live on the Robinhood testnet (chain id 46630) at
 > `0x97087017226BE5169CB719035eeF55400ccfC615`. Every address is in [`deployments/`](deployments/README.md).
