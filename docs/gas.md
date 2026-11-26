@@ -25,7 +25,7 @@
 <!-- gas-tables:begin -->
 | Call | Who calls | Execution | Calldata | Transaction |
 |---|---|---:|---:|---:|
-| `open` | opener | 191,278 | 6,400 | 218,678 |
+| `open` | opener | 191,290 | 6,412 | 218,702 |
 | `sell` | opener | 155,933 | 3,108 | 180,041 |
 | `liquidate`, 1 bet | settler | 96,119 | 1,848 | 118,967 |
 | `liquidate`, 10 bets | settler | 243,248 | 6,444 | 270,692 |

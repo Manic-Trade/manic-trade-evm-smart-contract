@@ -7,8 +7,8 @@ the upgrade reviewer can see at a glance what changed. The format follows
 
 ## [1.0.0] - 2026-11-25
 
-The first release: the whole contract, with its tests, scripts and documentation. Nothing is deployed from this
-repository yet.
+The first release: the whole contract, with its tests, scripts and documentation. Deployed on the Robinhood testnet
+on 2026-11-26 (`deployments/46630.json`).
 
 ### Added
 
