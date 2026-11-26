@@ -11,8 +11,14 @@ This repository holds the Flash Options contract, `ManicFlashOption`, for **Robi
 on where a price goes, staked and paid in USDG from one pool. It is written in Solidity 0.8.38 with Foundry, and runs as
 one upgradeable contract behind an ERC-1967 (UUPS) proxy.
 
-> **Status:** v1.0.0, live on the Robinhood testnet (chain id 46630) at
-> `0x97087017226BE5169CB719035eeF55400ccfC615`. Every address is in [`deployments/`](deployments/README.md).
+## Status
+
+v1.0.0, live on the Robinhood testnet (chain id 46630). The testnet has no USDG, so stakes and payouts there use a mock
+with USDG's behaviour. The contract, the proxy every call and event uses:
+[`0x97087017226BE5169CB719035eeF55400ccfC615`][testnet-proxy]. Every address is in
+[`deployments/`](deployments/README.md).
+
+[testnet-proxy]: https://explorer.testnet.chain.robinhood.com/address/0x97087017226BE5169CB719035eeF55400ccfC615
 
 ## What it does
 
