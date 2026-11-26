@@ -137,5 +137,5 @@ It needs Foundry 1.8.7. The toolchain, every command and how we work are in [`CO
 ## Security
 
 How to report a vulnerability: [`SECURITY.md`](SECURITY.md). The pitfalls checklist that the design answers:
-[`docs/security-checklist.md`](docs/security-checklist.md). Static analysis and coverage:
-[`audit/static-analysis.md`](audit/static-analysis.md).
+[`docs/security-checklist.md`](docs/security-checklist.md). Static analysis, coverage and mutation testing:
+[`audit/`](audit/README.md).
