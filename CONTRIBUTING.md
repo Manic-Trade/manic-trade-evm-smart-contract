@@ -60,7 +60,7 @@ The fork tests need an RPC URL (`cp .env.example .env`, then fill it in), and sk
 
 - **Branches:**
   - `dev` is the default branch and always holds stable, tested code.
-  - `main` only receives code that is deployed to mainnet.
+  - `main` matches `dev` until the mainnet launch. After it, `main` only receives code that is deployed to mainnet.
 - **One branch per change,** branched from `dev`:
   1. The work is developed and fully tested there.
   2. It goes into `dev` through a pull request.
