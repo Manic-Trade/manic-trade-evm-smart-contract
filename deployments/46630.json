@@ -1,0 +1,11 @@
+{
+  "chainId": 46630,
+  "commit": "50e46bbb6a562b17921f131262b52d6ec88cad7c",
+  "deployer": "0x007bc08EEEfbC5F507f9C97401B07445b949DA7C",
+  "implementation": "0x7205A88a5827c3E06514eB93B276Ddd8C0a3e97b",
+  "proxy": "0x97087017226BE5169CB719035eeF55400ccfC615",
+  "startBlock": 158053747,
+  "token": "0x6adb64CD5c282Cec956D286e44Ee937C759C114A",
+  "tokenIsMock": true,
+  "version": "1.0.0"
+}
