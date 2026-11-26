@@ -11,6 +11,13 @@ This repository holds the Flash Options contract, `ManicFlashOption`, for **Robi
 on where a price goes, staked and paid in USDG from one pool. It is written in Solidity 0.8.38 with Foundry, and runs as
 one upgradeable contract behind an ERC-1967 (UUPS) proxy.
 
+## Why Robinhood Chain
+
+- **Stakes and payouts in USDG,** Paxos's Global Dollar on Robinhood Chain, from one pool.
+- **No gas for users.** A user only signs; the backend sends each transaction and pays its gas, so users never need ETH.
+- **Ready for tokenized stocks.** A market is a price feed at a leverage, so stock markets can follow BTC, in step with
+  Robinhood Chain's focus on tokenized stocks.
+
 ## Status
 
 v1.0.0, live on the Robinhood testnet (chain id 46630). The testnet has no USDG, so stakes and payouts there use a mock
