@@ -3,8 +3,8 @@
 For the backend (the relayers, the signing service, the indexer) and the frontend. It says what to call, in which
 order, what to sign, what comes back, and what to do when a call is refused.
 
-**Status:** v1.0.0: everything in this guide is built and tested. The first testnet deployment from this repository
-is pending; once a chain is deployed, its addresses are in `deployments/<chainId>.json` ([§13](#13-deployments)).
+**Status:** v1.0.0: everything in this guide is built and tested, and live on the Robinhood testnet. Its addresses
+are in `deployments/46630.json` ([§13](#13-deployments)).
 
 **The leverage** is the user's choice:
 - A market is a price feed at one leverage, so BTC can have a 1000x, a 500x and a 100x market, each with its own
@@ -111,11 +111,11 @@ The tick must be:
 - at most `clockSkewSecs` ahead of the chain's clock (5 at launch, 30 at most);
 - at or after `notBefore`.
 
-**Timing on the Robinhood testnet** (measured on 2026-11-23 by the smoke test, `script/smoke.py`, on a test
-deployment):
-- **The chain's clock runs behind real time.** The latest block's timestamp trailed it by 1.31 s at the median and
-  2.36 s at most, over 40 samples. The local clock was checked against NTP, within 0.01 s.
-  - So a fresh tick looks up to about 2.4 s "ahead" of the chain. The clock skew of 5 covers that.
+**Timing on the Robinhood testnet** (measured on 2026-11-26 by the smoke test, `script/smoke.py`, on the deployment in
+[§13](#13-deployments)):
+- **The chain's clock runs behind real time.** The latest block's timestamp trailed it by 1.24 s at the median and
+  2.06 s at most, over 40 samples. The local clock was checked against NTP, within 0.02 s.
+  - So a fresh tick looks up to about 2.1 s "ahead" of the chain. The clock skew of 5 covers that.
   - Ages count from the chain's clock, so the lag also buys the opener about a second.
 - **The landing time.** A signed open or sale, sent at once with the nonce and gas given, landed 1 to 2 s after its
   tick's time (23 of 23).
@@ -446,13 +446,13 @@ with the type hashes `0xfdf5c145d2145b57fd84fa99ed38082c86b234326f84c1896eb2894e
 
 ## 13. Deployments
 
-Nothing is deployed from this repository yet. Once a chain is deployed, its record,
-`deployments/<chainId>.json`, holds the proxy's address (the one every call and event uses), the implementation, the
-token and the block to read events from ([deployments/README.md](../deployments/README.md)).
+Each deployed chain's record, `deployments/<chainId>.json`, holds the proxy's address (the one every call and event
+uses), the implementation, the token and the block to read events from
+([deployments/README.md](../deployments/README.md)).
 
 | Chain | Id | USDG | Record |
 |---|---|---|---|
-| Robinhood Chain testnet | 46630 | a mock with USDG's behaviour (`script/DeployMockUsdg.s.sol`), since the testnet has none | `deployments/46630.json`, once deployed |
+| Robinhood Chain testnet | 46630 | a mock with USDG's behaviour (`script/DeployMockUsdg.s.sol`), since the testnet has none | `deployments/46630.json`: the contract is `0x97087017226BE5169CB719035eeF55400ccfC615`, from block 158053747 |
 | Robinhood Chain | 4663 | Paxos USDG | `deployments/4663.json`, once deployed |
 
 Robinhood Chain allows contracts up to 98,304 bytes, and this one fits. Its blocks are about 0.1 seconds apart, with

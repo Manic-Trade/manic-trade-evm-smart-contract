@@ -4,8 +4,8 @@
 goes, staked and paid in USDG from one pool. It is written in Solidity 0.8.38 with Foundry, and runs as one upgradeable
 contract behind an ERC-1967 (UUPS) proxy.
 
-> **Status:** v1.0.0. The first testnet deployment from this repository is pending; its addresses will be in
-> [`deployments/`](deployments/README.md).
+> **Status:** v1.0.0, live on the Robinhood testnet (chain id 46630) at
+> `0x97087017226BE5169CB719035eeF55400ccfC615`. Every address is in [`deployments/`](deployments/README.md).
 
 ## What it does
 

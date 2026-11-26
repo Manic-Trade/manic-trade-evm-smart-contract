@@ -14,7 +14,7 @@ We will acknowledge the report, investigate, and keep you updated until it is fi
 ## Scope
 
 - The contracts in `src/` and their deployment scripts in `script/`.
-- Deployed addresses will be listed in `deployments/` once they exist. Nothing is deployed from this repository yet.
+- Deployed addresses are listed in `deployments/`: the Robinhood testnet (chain id 46630) only. Nothing is on mainnet.
 
 ## How the design handles security
 
