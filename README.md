@@ -5,7 +5,7 @@ minutes. Flash Options lets you trade synthetic BTC options like perps: pick Lon
 1000x, get paid by how far the price moves, and never lose more than your stake. In Higher/Lower, you pick a direction
 and a duration and see your fixed payout before you trade (Coming Soon).
 
-**Try it:** [options.manic.trade](https://options.manic.trade)
+**See it on chain:** [the contract on the Robinhood testnet][testnet-proxy], with its verified source and transactions.
 
 This repository holds the Flash Options contract, `ManicFlashOption`, for **Robinhood Chain**: short, leveraged trades
 on where a price goes, staked and paid in USDG from one pool. It is written in Solidity 0.8.38 with Foundry, and runs as
