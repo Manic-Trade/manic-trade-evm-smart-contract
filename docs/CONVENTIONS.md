@@ -259,7 +259,7 @@ Storage: no change. ABI: no change.
 - **Merge commits, not squash.** Each commit stays in the history, so every commit must build, pass the tests and
   read well on its own. The PR title follows the same `type(scope): summary` format.
 - One branch per change, branched from `dev` and merged into `dev` by pull request. `dev` is the default branch;
-  `main` only receives what is deployed to mainnet.
+  `main` matches `dev` until the mainnet launch, and after it only receives what is deployed to mainnet.
 
 ## 13. Docs
 
