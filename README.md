@@ -37,10 +37,7 @@ with USDG's behaviour. The contract, the proxy every call and event uses:
   - a floor: the least a right call pays;
   - a cap: the most a bet pays.
 - **The platform is never the counterparty.** One pool, funded by the operator, pays winners, and losers' stakes go
-  into it. The platform earns fees only:
-  - 2% of a winner's profit;
-  - 3% of a loss, while the pool's free money is at or above its floor;
-  - on an early sale, 1% + 5% × the time left, capped at 6%: the backend quotes it, and the contract enforces the cap.
+  into it. The platform earns fees only and never takes the other side of a trade.
 - **Commit first, price after.** The user signs an order with no price in it (EIP-712, domain `"Manic Flash Option"`,
   version `"1"`), and a USDG authorisation for exactly the stake. The backend adds the next price tick, sends the
   transaction and pays the gas, so users never need ETH.
