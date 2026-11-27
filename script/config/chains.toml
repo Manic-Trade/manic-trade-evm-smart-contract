@@ -51,7 +51,8 @@ enabled = [1000, 500, 100]
 pool_funding = 10_000_000_000
 
 # The Robinhood testnet. One deployer key holds the admin, upgrader, operator and guardian roles: a test network, with
-# no timelock (ARCHITECTURE §4.2). The relayer keys are two openers and two settlers, one role per key.
+# no timelock (ARCHITECTURE §4.2). The relayer keys are the backend's two openers and two settlers, one role per key;
+# they replaced the deployment's own test keys on 2026-11-27 (deployments/README.md).
 # BTC at 1000x, 500x and 100x, all switched on; the breaker at $1,000 an hour, as in the tests; $10,000 of mock USDG
 # in the pool.
 [46630]
@@ -62,8 +63,8 @@ admin_transfer_delay = 3600
 upgrader = "0x007bc08EEEfbC5F507f9C97401B07445b949DA7C"
 operator = "0x007bc08EEEfbC5F507f9C97401B07445b949DA7C"
 guardian = "0x007bc08EEEfbC5F507f9C97401B07445b949DA7C"
-openers = ["0x0E247eeD7dab2fa2320eb58385b420d9586f0396", "0x1D72314DD87c447f3D9158da2D2467e94De760F9"]
-settlers = ["0xC479AA8d7132CdbC1C9278FAFdd54dFBF01f740C", "0x703625616852869Fa51d9Ead8074BB8dFc161f6d"]
+openers = ["0x0B60B48f61447145A82BAe418752583E8Ff39f66", "0xb5557f7dDEf40084736E1d6ADd6AdBcfd2542371"]
+settlers = ["0x2406C2041E81bF230400e35F969aB67A7B861189", "0x4F72be39E1E593A92a58465f3B55afcf1DCF992F"]
 token = "0x0000000000000000000000000000000000000000"
 pool_floor = 500_000_000
 fee_recipient = "0x007bc08EEEfbC5F507f9C97401B07445b949DA7C"
